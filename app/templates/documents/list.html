@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Belgeler{% endblock %}
+{% block page_title %}Belgeler — {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Yükleme Formu -->
+  <div class="col-12 col-md-4">
+    <div class="card">
+      <div class="card-header bg-white py-2">
+        <h6 class="mb-0 small fw-semibold"><i class="bi bi-upload me-1"></i> Belge Yükle</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" action="{% url 'documents:upload' patient.pk %}">
+          {% csrf_token %}
+          {% crispy upload_form %}
+          <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
+            <i class="bi bi-cloud-upload me-1"></i> Yükle
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Belge Listesi -->
+  <div class="col-12 col-md-8">
+    <div class="card">
+      <div class="card-header bg-white py-2">
+        <h6 class="mb-0 small fw-semibold">
+          <i class="bi bi-folder2-open me-1"></i>
+          {{ patient.full_name }} — Belgeler
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        {% if documents %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr><th>Tarih</th><th>Dosya</th><th>Kategori</th><th>Boyut</th><th>Açıklama</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for doc in documents %}
+              <tr>
+                <td>{{ doc.created_at|date:"d.m.Y" }}</td>
+                <td>
+                  <i class="bi bi-{% if doc.is_image %}image{% else %}file-earmark{% endif %} me-1 text-muted"></i>
+                  {{ doc.original_filename|truncatechars:30 }}
+                </td>
+                <td><span class="badge bg-secondary">{{ doc.get_category_display }}</span></td>
+                <td class="text-muted small">{{ doc.file_size|filesizeformat }}</td>
+                <td class="text-muted small">{{ doc.description|truncatechars:30 }}</td>
+                <td>
+                  <a href="{% url 'documents:download' doc.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                    <i class="bi bi-download"></i>
+                  </a>
+                  <a href="{% url 'documents:delete' doc.pk %}" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-folder2" style="font-size:2rem"></i>
+          <p class="mt-2 small">Belge yüklenmemiş.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

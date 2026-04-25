@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block title %}Muayene Detayı{% endblock %}
+{% block page_title %}Muayene Detayı{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-clipboard2-pulse me-1 text-primary"></i>
+          Muayene — {{ examination.created_at|date:"d.m.Y" }}
+        </h6>
+        <div class="d-flex gap-2">
+          {% if user.is_doctor %}
+          <a href="{% url 'examinations:update' examination.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>Düzenle
+          </a>
+          <a href="{% url 'prescriptions:create' examination.pk %}" class="btn btn-sm btn-success">
+            <i class="bi bi-prescription2 me-1"></i>Reçete Yaz
+          </a>
+          {% endif %}
+          <a href="{% url 'documents:upload' examination.patient.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-upload me-1"></i>Belge Ekle
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="text-muted small">Hasta</label>
+            <div><a href="{% url 'patients:detail' examination.patient.pk %}" class="fw-semibold">{{ examination.patient.full_name }}</a></div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Doktor</label>
+            <div class="fw-semibold">{{ examination.doctor }}</div>
+          </div>
+        </div>
+
+        {% if vitals %}
+        <div class="card bg-light mb-3">
+          <div class="card-body py-2">
+            <div class="row g-2 text-center">
+              {% if vitals.height %}<div class="col"><small class="text-muted d-block">Boy</small><strong>{{ vitals.height }} cm</strong></div>{% endif %}
+              {% if vitals.weight %}<div class="col"><small class="text-muted d-block">Kilo</small><strong>{{ vitals.weight }} kg</strong></div>{% endif %}
+              {% if vitals.bmi %}<div class="col"><small class="text-muted d-block">VKİ</small><strong>{{ vitals.bmi }}</strong></div>{% endif %}
+              {% if vitals.temperature %}<div class="col"><small class="text-muted d-block">Ateş</small><strong>{{ vitals.temperature }}°C</strong></div>{% endif %}
+              {% if vitals.pulse %}<div class="col"><small class="text-muted d-block">Nabız</small><strong>{{ vitals.pulse }}</strong></div>{% endif %}
+              {% if vitals.systolic_bp %}<div class="col"><small class="text-muted d-block">KB</small><strong>{{ vitals.systolic_bp }}/{{ vitals.diastolic_bp }}</strong></div>{% endif %}
+              {% if vitals.oxygen_saturation %}<div class="col"><small class="text-muted d-block">SpO2</small><strong>%{{ vitals.oxygen_saturation }}</strong></div>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% for field, label in examination.complaint,Şikayet|examination.anamnesis,Anamnez|examination.findings,Bulgular|examination.pre_diagnosis,Ön Tanı|examination.diagnosis,Kesin Tanı|examination.treatment_plan,Tedavi Planı|examination.result,Sonuç %}
+        {% endfor %}
+
+        {% if examination.complaint %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Şikayet</label>
+          <div class="p-2 bg-light rounded">{{ examination.complaint }}</div>
+        </div>
+        {% endif %}
+        {% if examination.anamnesis %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Anamnez / Hikaye</label>
+          <div class="p-2 bg-light rounded">{{ examination.anamnesis }}</div>
+        </div>
+        {% endif %}
+        {% if examination.findings %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Fizik Muayene Bulguları</label>
+          <div class="p-2 bg-light rounded">{{ examination.findings }}</div>
+        </div>
+        {% endif %}
+        {% if examination.diagnosis or examination.pre_diagnosis %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Tanı</label>
+          <div class="p-2 bg-light rounded">
+            {% if examination.diagnosis %}{{ examination.diagnosis }}{% else %}{{ examination.pre_diagnosis }}{% endif %}
+            {% if examination.icd10_code %}<span class="badge bg-secondary ms-2">{{ examination.icd10_code }}</span>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% if examination.treatment_plan %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Tedavi Planı</label>
+          <div class="p-2 bg-light rounded">{{ examination.treatment_plan }}</div>
+        </div>
+        {% endif %}
+        {% if examination.result %}
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Muayene Sonucu</label>
+          <div class="p-2 bg-light rounded">{{ examination.result }}</div>
+        </div>
+        {% endif %}
+        {% if examination.control_date %}
+        <div class="alert alert-info py-2">
+          <i class="bi bi-calendar-check me-1"></i>
+          Kontrol Tarihi: <strong>{{ examination.control_date|date:"d.m.Y" }}</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Reçeteler -->
+    {% if prescriptions %}
+    {% for presc in prescriptions %}
+    <div class="card mt-3">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold"><i class="bi bi-prescription2 me-1"></i>Reçete #{{ presc.pk }}</span>
+        <a href="{% url 'prescriptions:pdf' presc.pk %}" class="btn btn-sm btn-outline-danger" target="_blank">
+          <i class="bi bi-file-pdf me-1"></i>PDF
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>İlaç</th><th>Doz</th><th>Kullanım</th><th>Süre</th></tr></thead>
+          <tbody>
+            {% for item in presc.items.all %}
+            <tr>
+              <td class="fw-semibold">{{ item.medicine_name }}</td>
+              <td>{{ item.dosage }}</td>
+              <td>{{ item.frequency }}</td>
+              <td>{{ item.duration }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Belgeler -->
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header bg-white py-2">
+        <h6 class="mb-0 small fw-semibold">Muayene Belgeleri</h6>
+      </div>
+      <div class="card-body p-0">
+        {% if documents %}
+        <div class="list-group list-group-flush">
+          {% for doc in documents %}
+          <div class="list-group-item px-3 py-2 d-flex justify-content-between">
+            <div>
+              <small class="fw-semibold">{{ doc.original_filename|truncatechars:25 }}</small>
+              <div class="text-muted" style="font-size:.7rem">{{ doc.get_category_display }}</div>
+            </div>
+            <a href="{% url 'documents:download' doc.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+              <i class="bi bi-download"></i>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3 small">Belge yok.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

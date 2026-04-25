@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Randevu Detayı{% endblock %}
+{% block page_title %}Randevu Detayı{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-calendar-event me-1"></i> Randevu #{{ appointment.pk }}</h6>
+        <div class="d-flex gap-2">
+          <a href="{% url 'appointments:update' appointment.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>Düzenle
+          </a>
+          {% if user.is_doctor %}
+          <a href="{% url 'examinations:create_from_appointment' appointment.patient.pk appointment.pk %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-clipboard-plus me-1"></i>Muayene Başlat
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="text-muted small">Hasta</label>
+            <div class="fw-semibold">
+              <a href="{% url 'patients:detail' appointment.patient.pk %}">{{ appointment.patient.full_name }}</a>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Doktor</label>
+            <div class="fw-semibold">{{ appointment.doctor }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Başlangıç</label>
+            <div class="fw-semibold">{{ appointment.appointment_start|date:"d.m.Y H:i" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Bitiş</label>
+            <div class="fw-semibold">{{ appointment.appointment_end|date:"H:i" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Tür</label>
+            <div>{{ appointment.get_appointment_type_display }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Durum</label>
+            <div>
+              <span class="badge badge-status-{{ appointment.status }} fs-6">{{ appointment.get_status_display }}</span>
+            </div>
+          </div>
+          {% if appointment.note %}
+          <div class="col-12">
+            <label class="text-muted small">Not</label>
+            <div>{{ appointment.note }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Durum Değiştirme -->
+        <hr>
+        <div class="d-flex flex-wrap gap-2">
+          <strong class="small align-self-center">Durum Güncelle:</strong>
+          {% with statuses="CONFIRMED,ARRIVED,IN_EXAM,COMPLETED,CANCELLED,NO_SHOW" %}
+          {% for s in statuses.split:"," %}
+          <button class="btn btn-sm btn-outline-secondary status-btn" data-status="{{ s }}">
+            {{ s }}
+          </button>
+          {% endfor %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.status-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const status = this.dataset.status;
+    const fd = new FormData();
+    fd.append('status', status);
+    fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    fetch('{% url "appointments:status_update" appointment.pk %}', {method:'POST', body:fd})
+      .then(r => r.json())
+      .then(data => {
+        if (data.status) location.reload();
+        else alert(data.error || 'Hata');
+      });
+  });
+});
+</script>
+{% endblock %}

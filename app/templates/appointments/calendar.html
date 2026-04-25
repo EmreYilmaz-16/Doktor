@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Randevu Takvimi{% endblock %}
+{% block page_title %}Randevu Takvimi{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-md-3">
+    <div class="card mb-3">
+      <div class="card-body">
+        <label class="form-label fw-semibold small">Doktor Filtresi</label>
+        <select id="doctorFilter" class="form-select form-select-sm">
+          <option value="">Tüm Doktorlar</option>
+          {% for doctor in doctors %}
+          <option value="{{ doctor.pk }}" data-color="{{ doctor.color }}">{{ doctor }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <a href="{% url 'appointments:create' %}" class="btn btn-primary btn-sm w-100 mb-2">
+          <i class="bi bi-plus-circle me-1"></i> Yeni Randevu
+        </a>
+        <a href="{% url 'appointments:list' %}" class="btn btn-outline-secondary btn-sm w-100">
+          <i class="bi bi-list-ul me-1"></i> Liste Görünümü
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-9">
+    <div class="card">
+      <div class="card-body p-2">
+        <div id="calendar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/tr.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarEl = document.getElementById('calendar');
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'tr',
+    initialView: 'timeGridWeek',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    slotMinTime: '07:00:00',
+    slotMaxTime: '21:00:00',
+    allDaySlot: false,
+    height: 'auto',
+    events: function(info, successCallback, failureCallback) {
+      const doctor = document.getElementById('doctorFilter').value;
+      const url = new URL('{% url "appointments:calendar_api" %}', window.location.origin);
+      url.searchParams.set('start', info.startStr);
+      url.searchParams.set('end', info.endStr);
+      if (doctor) url.searchParams.set('doctor', doctor);
+      fetch(url)
+        .then(r => r.json())
+        .then(data => successCallback(data))
+        .catch(e => failureCallback(e));
+    },
+    eventClick: function(info) {
+      window.location.href = info.event.url;
+      info.jsEvent.preventDefault();
+    },
+    eventDidMount: function(info) {
+      const props = info.event.extendedProps;
+      const tip = `${props.doctor}\n${props.status}\n${props.type}`;
+      info.el.setAttribute('title', tip);
+    }
+  });
+  calendar.render();
+
+  document.getElementById('doctorFilter').addEventListener('change', function() {
+    calendar.refetchEvents();
+  });
+});
+</script>
+{% endblock %}

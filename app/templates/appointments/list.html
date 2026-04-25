@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Randevular{% endblock %}
+{% block page_title %}Randevu Listesi{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <h6 class="mb-0 fw-semibold"><i class="bi bi-list-check me-1"></i> Randevular</h6>
+    <a href="{% url 'appointments:create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus me-1"></i> Yeni Randevu
+    </a>
+  </div>
+  <div class="card-body border-bottom">
+    <form method="get" class="row g-2">
+      <div class="col-md-3">
+        <input type="date" name="date" class="form-control form-control-sm" value="{{ request.GET.date }}">
+      </div>
+      <div class="col-md-3">
+        <select name="doctor" class="form-select form-select-sm">
+          <option value="">Tüm Doktorlar</option>
+          {% for d in doctors %}
+          <option value="{{ d.pk }}" {% if request.GET.doctor == d.pk|stringformat:"s" %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tüm Durumlar</option>
+          {% for val, label in statuses %}
+          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrele</button>
+        <a href="{% url 'appointments:list' %}" class="btn btn-sm btn-outline-secondary">Temizle</a>
+      </div>
+    </form>
+  </div>
+  <div class="card-body p-0">
+    {% if appointments %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Tarih / Saat</th>
+            <th>Hasta</th>
+            <th>Doktor</th>
+            <th>Tür</th>
+            <th>Durum</th>
+            <th>Not</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for apt in appointments %}
+          <tr>
+            <td class="fw-semibold">{{ apt.appointment_start|date:"d.m.Y H:i" }}</td>
+            <td><a href="{% url 'patients:detail' apt.patient.pk %}" class="text-decoration-none">{{ apt.patient.full_name }}</a></td>
+            <td class="text-muted">{{ apt.doctor }}</td>
+            <td><span class="badge bg-light text-dark border">{{ apt.get_appointment_type_display }}</span></td>
+            <td><span class="badge badge-status-{{ apt.status }} rounded-pill">{{ apt.get_status_display }}</span></td>
+            <td class="text-muted small">{{ apt.note|truncatechars:30 }}</td>
+            <td>
+              <a href="{% url 'appointments:detail' apt.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'appointments:update' apt.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center py-3">
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
+        <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</a></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+      </ul></nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-calendar-x" style="font-size:3rem"></i>
+      <p class="mt-2">Randevu bulunamadı.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

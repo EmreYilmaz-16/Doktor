@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Reçete #{{ prescription.pk }}{% endblock %}
+{% block page_title %}Reçete Detayı{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-prescription2 me-1"></i> Reçete #{{ prescription.pk }}</h6>
+        <a href="{% url 'prescriptions:pdf' prescription.pk %}" class="btn btn-sm btn-danger" target="_blank">
+          <i class="bi bi-file-pdf me-1"></i> PDF İndir
+        </a>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="text-muted small">Hasta</label>
+            <div class="fw-semibold"><a href="{% url 'patients:detail' prescription.patient.pk %}">{{ prescription.patient.full_name }}</a></div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Doktor</label>
+            <div class="fw-semibold">{{ prescription.doctor }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Tarih</label>
+            <div>{{ prescription.prescription_date|date:"d.m.Y" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Durum</label>
+            <div><span class="badge bg-success">{{ prescription.get_status_display }}</span></div>
+          </div>
+        </div>
+
+        <h6 class="fw-semibold">İlaçlar</h6>
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr><th>İlaç</th><th>Doz</th><th>Kullanım</th><th>Süre</th><th>Talimat</th></tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td class="fw-semibold">{{ item.medicine_name }}</td>
+              <td>{{ item.dosage }}</td>
+              <td>{{ item.frequency }}</td>
+              <td>{{ item.duration }}</td>
+              <td class="small text-muted">{{ item.usage_instruction }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if prescription.note %}
+        <div class="alert alert-light border">
+          <strong>Not:</strong> {{ prescription.note }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

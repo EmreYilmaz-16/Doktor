@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Raporlar{% endblock %}
+{% block page_title %}İstatistikler & Raporlar{% endblock %}
+
+{% block content %}
+<!-- Özet Kartlar -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card green p-3">
+      <div class="text-muted small">Toplam Aktif Hasta</div>
+      <h3 class="fw-bold">{{ total_patients }}</h3>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card blue p-3">
+      <div class="text-muted small">Bu Ay Randevu</div>
+      <h3 class="fw-bold">{{ month_appointments }}</h3>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card orange p-3">
+      <div class="text-muted small">Bu Ay Tahsilat</div>
+      <h3 class="fw-bold">{{ month_income|floatformat:0 }} ₺</h3>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card teal p-3">
+      <div class="text-muted small">Bu Ay Gelmedi</div>
+      <h3 class="fw-bold">{{ no_show_count }}</h3>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Günlük Hasta Grafiği -->
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header bg-white py-2">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-bar-chart me-1"></i> Son 30 Gün — Tamamlanan Muayene</h6>
+      </div>
+      <div class="card-body">
+        <canvas id="dailyChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Aylık Gelir Grafiği -->
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-header bg-white py-2">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-graph-up me-1"></i> Aylık Tahsilat Trendi</h6>
+      </div>
+      <div class="card-body">
+        <canvas id="incomeChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const dailyLabels = {{ daily_labels|safe }};
+const dailyValues = {{ daily_values|safe }};
+const incomeLabels = {{ income_labels|safe }};
+const incomeValues = {{ income_values|safe }};
+
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: dailyLabels,
+    datasets: [{
+      label: 'Muayene Sayısı',
+      data: dailyValues,
+      backgroundColor: 'rgba(13,110,253,0.6)',
+      borderRadius: 4,
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('incomeChart'), {
+  type: 'line',
+  data: {
+    labels: incomeLabels,
+    datasets: [{
+      label: 'Tahsilat (₺)',
+      data: incomeValues,
+      borderColor: '#198754',
+      backgroundColor: 'rgba(25,135,84,.1)',
+      fill: true,
+      tension: 0.4,
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Reçete Yaz{% endblock %}
+{% block page_title %}Reçete Oluştur{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-9">
+    {% if allergies %}
+    <div class="alert alert-danger">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <strong>Alerji Uyarısı:</strong> {{ allergies }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-prescription2 me-1 text-success"></i>
+          Reçete — {{ patient.full_name }}
+        </h6>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.note|as_crispy_field }}
+
+          <h6 class="fw-semibold mt-3 mb-2">İlaçlar</h6>
+          {{ item_formset.management_form }}
+          <div id="formset-container">
+            {% for item_form in item_formset %}
+            <div class="card mb-2 item-form">
+              <div class="card-body py-2">
+                {{ item_form.id }}
+                <div class="row g-2">
+                  <div class="col-md-6">{{ item_form.medicine_name|as_crispy_field }}</div>
+                  <div class="col-md-6">{{ item_form.active_ingredient|as_crispy_field }}</div>
+                  <div class="col-md-4">{{ item_form.dosage|as_crispy_field }}</div>
+                  <div class="col-md-4">{{ item_form.frequency|as_crispy_field }}</div>
+                  <div class="col-md-4">{{ item_form.duration|as_crispy_field }}</div>
+                  <div class="col-12">{{ item_form.usage_instruction|as_crispy_field }}</div>
+                </div>
+                {% if item_form.DELETE %}
+                <div class="text-end">{{ item_form.DELETE }} <label class="text-danger small">Sil</label></div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-success fw-semibold">
+              <i class="bi bi-check-circle me-1"></i> Reçeteyi Kaydet
+            </button>
+            <a href="{% url 'examinations:detail' examination.pk %}" class="btn btn-outline-secondary">İptal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

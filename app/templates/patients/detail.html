@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.full_name }}{% endblock %}
+{% block page_title %}Hasta Kartı{% endblock %}
+
+{% block content %}
+<!-- Hasta Başlığı -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
+             style="width:60px;height:60px;font-size:1.4rem">
+          {{ patient.name.0 }}{{ patient.surname.0 }}
+        </div>
+        <div>
+          <h4 class="mb-0 fw-bold">{{ patient.full_name }}</h4>
+          <div class="text-muted small">
+            {% if patient.age %}{{ patient.age }} yaş &bull; {% endif %}
+            {% if patient.birth_date %}{{ patient.birth_date|date:"d.m.Y" }} &bull; {% endif %}
+            {{ patient.get_gender_display }}
+            {% if patient.blood_type != '?' %}
+            &bull; <span class="badge bg-danger">{{ patient.blood_type }}</span>
+            {% endif %}
+          </div>
+          <div class="mt-1">
+            <i class="bi bi-telephone me-1"></i>{{ patient.phone }}
+            {% if patient.email %}&nbsp;<i class="bi bi-envelope me-1"></i>{{ patient.email }}{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'patients:update' patient.pk %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-pencil me-1"></i>Düzenle
+        </a>
+        <a href="{% url 'appointments:create' %}?patient={{ patient.pk }}" class="btn btn-success btn-sm">
+          <i class="bi bi-calendar-plus me-1"></i>Randevu
+        </a>
+        {% if user.is_doctor %}
+        <a href="{% url 'examinations:create' patient.pk %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-clipboard-plus me-1"></i>Muayene
+        </a>
+        {% endif %}
+        <a href="{% url 'payments:create' patient.pk %}" class="btn btn-outline-warning btn-sm">
+          <i class="bi bi-cash me-1"></i>Ödeme
+        </a>
+      </div>
+    </div>
+
+    {% if patient.notes %}
+    <div class="alert alert-warning mt-3 mb-0 py-2">
+      <i class="bi bi-exclamation-triangle me-1"></i><strong>Uyarı:</strong> {{ patient.notes }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Sekmeler -->
+<ul class="nav nav-tabs mb-3" id="patientTabs">
+  <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#randevular">Randevular</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#muayeneler">Muayeneler</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#receteler">Reçeteler</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#belgeler">Belgeler</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#saglik">Sağlık Bilgileri</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#odemeler">Ödemeler</a></li>
+</ul>
+
+<div class="tab-content">
+  <!-- Randevular -->
+  <div class="tab-pane fade show active" id="randevular">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold">Randevular</span>
+        <a href="{% url 'appointments:create' %}?patient={{ patient.pk }}" class="btn btn-sm btn-success">
+          <i class="bi bi-plus"></i> Yeni
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if appointments %}
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Tarih</th><th>Doktor</th><th>Tür</th><th>Durum</th><th></th></tr></thead>
+          <tbody>
+            {% for apt in appointments %}
+            <tr>
+              <td>{{ apt.appointment_start|date:"d.m.Y H:i" }}</td>
+              <td>{{ apt.doctor }}</td>
+              <td>{{ apt.get_appointment_type_display }}</td>
+              <td><span class="badge badge-status-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+              <td><a href="{% url 'appointments:detail' apt.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted text-center py-3">Randevu yok.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Muayeneler -->
+  <div class="tab-pane fade" id="muayeneler">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold">Muayene Kayıtları</span>
+        {% if user.is_doctor %}
+        <a href="{% url 'examinations:create' patient.pk %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus"></i> Yeni Muayene
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if examinations %}
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Tarih</th><th>Doktor</th><th>Tanı</th><th></th></tr></thead>
+          <tbody>
+            {% for exam in examinations %}
+            <tr>
+              <td>{{ exam.created_at|date:"d.m.Y" }}</td>
+              <td>{{ exam.doctor }}</td>
+              <td>{{ exam.diagnosis|default:exam.pre_diagnosis|default:"-"|truncatechars:40 }}</td>
+              <td><a href="{% url 'examinations:detail' exam.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted text-center py-3">Muayene kaydı yok.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Reçeteler -->
+  <div class="tab-pane fade" id="receteler">
+    <div class="card">
+      <div class="card-header bg-white py-2"><span class="fw-semibold">Reçeteler</span></div>
+      <div class="card-body p-0">
+        {% if prescriptions %}
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Tarih</th><th>Doktor</th><th>Durum</th><th></th></tr></thead>
+          <tbody>
+            {% for presc in prescriptions %}
+            <tr>
+              <td>{{ presc.prescription_date|date:"d.m.Y" }}</td>
+              <td>{{ presc.doctor }}</td>
+              <td><span class="badge bg-{{ presc.status|lower }}">{{ presc.get_status_display }}</span></td>
+              <td>
+                <a href="{% url 'prescriptions:detail' presc.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                <a href="{% url 'prescriptions:pdf' presc.pk %}" class="btn btn-sm btn-outline-danger" target="_blank"><i class="bi bi-file-pdf"></i></a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted text-center py-3">Reçete yok.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Belgeler -->
+  <div class="tab-pane fade" id="belgeler">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold">Belgeler</span>
+        <a href="{% url 'documents:upload' patient.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-upload me-1"></i>Belge Yükle
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if documents %}
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Tarih</th><th>Dosya</th><th>Kategori</th><th>Açıklama</th><th></th></tr></thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td>{{ doc.created_at|date:"d.m.Y" }}</td>
+              <td class="small">{{ doc.original_filename|truncatechars:30 }}</td>
+              <td><span class="badge bg-secondary">{{ doc.get_category_display }}</span></td>
+              <td class="text-muted small">{{ doc.description|truncatechars:30 }}</td>
+              <td>
+                <a href="{% url 'documents:download' doc.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="bi bi-download"></i></a>
+                <a href="{% url 'documents:delete' doc.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted text-center py-3">Belge yok.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sağlık Bilgileri -->
+  <div class="tab-pane fade" id="saglik">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold">Sağlık Bilgileri</span>
+        <a href="{% url 'patients:medical_info' patient.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil me-1"></i>Düzenle
+        </a>
+      </div>
+      <div class="card-body">
+        {% if medical_info %}
+        <div class="row g-3">
+          {% if medical_info.allergies %}
+          <div class="col-md-6">
+            <div class="alert alert-danger py-2 mb-0">
+              <strong><i class="bi bi-exclamation-triangle me-1"></i>Alerjiler:</strong><br>
+              {{ medical_info.allergies }}
+            </div>
+          </div>
+          {% endif %}
+          {% if medical_info.chronic_diseases %}
+          <div class="col-md-6">
+            <div class="alert alert-warning py-2 mb-0">
+              <strong>Kronik Hastalıklar:</strong><br>{{ medical_info.chronic_diseases }}
+            </div>
+          </div>
+          {% endif %}
+          {% if medical_info.regular_medicines %}
+          <div class="col-md-6">
+            <h6 class="text-muted small">Sürekli İlaçlar</h6>
+            <p>{{ medical_info.regular_medicines }}</p>
+          </div>
+          {% endif %}
+          {% if medical_info.surgeries %}
+          <div class="col-md-6">
+            <h6 class="text-muted small">Ameliyatlar</h6>
+            <p>{{ medical_info.surgeries }}</p>
+          </div>
+          {% endif %}
+          {% if medical_info.family_history %}
+          <div class="col-12">
+            <h6 class="text-muted small">Aile Hastalık Geçmişi</h6>
+            <p>{{ medical_info.family_history }}</p>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3">Sağlık bilgisi girilmemiş.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Ödemeler -->
+  <div class="tab-pane fade" id="odemeler">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
+        <span class="fw-semibold">Ödemeler</span>
+        <a href="{% url 'payments:create' patient.pk %}" class="btn btn-sm btn-outline-warning">
+          <i class="bi bi-plus"></i> Ödeme Ekle
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if payments %}
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Tarih</th><th>Tutar</th><th>Tür</th><th>Durum</th><th>Açıklama</th></tr></thead>
+          <tbody>
+            {% for pay in payments %}
+            <tr>
+              <td>{{ pay.created_at|date:"d.m.Y" }}</td>
+              <td class="fw-semibold">{{ pay.net_amount|floatformat:2 }} ₺</td>
+              <td>{{ pay.get_payment_type_display }}</td>
+              <td><span class="badge bg-{% if pay.payment_status == 'PAID' %}success{% elif pay.payment_status == 'PENDING' %}warning text-dark{% else %}secondary{% endif %}">{{ pay.get_payment_status_display }}</span></td>
+              <td class="text-muted small">{{ pay.description|truncatechars:30 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted text-center py-3">Ödeme kaydı yok.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
