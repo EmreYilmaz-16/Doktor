@@ -124,6 +124,8 @@
     </div>
   </div>
 </div>
+
+{{ doc.annotations|json_script:"saved-data" }}
 {% endblock %}
 
 {% block extra_css %}
@@ -159,7 +161,7 @@
   const IMAGE_URL = "{{ doc.file.url }}";
   const SAVE_URL = "{% url 'documents:annotate' doc.pk %}";
   const CSRF_TOKEN = "{{ csrf_token }}";
-  const SAVED_DATA = {{ doc.annotations|default:"{}"|safe }};
+  const SAVED_DATA = JSON.parse(document.getElementById('saved-data').textContent || '{}');
 
   // --- Değişkenler ---
   let canvas, fabricImg;
