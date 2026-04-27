@@ -32,6 +32,32 @@ class Examination(models.Model):
         return f'{self.patient} - {self.created_at:%d.%m.%Y}'
 
 
+class ExaminationService(models.Model):
+    """Muayenede yapılan işlem / borçlandırma kalemi."""
+    examination = models.ForeignKey(
+        Examination, on_delete=models.CASCADE, related_name='services', verbose_name='Muayene'
+    )
+    service = models.ForeignKey(
+        'payments.Service', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hizmet'
+    )
+    description = models.CharField(max_length=300, verbose_name='Açıklama')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Tutar')
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='İndirim')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Tarih')
+
+    class Meta:
+        verbose_name = 'Muayene Hizmeti'
+        verbose_name_plural = 'Muayene Hizmetleri'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.examination} – {self.description} ({self.net_amount} ₺)'
+
+    @property
+    def net_amount(self):
+        return self.amount - self.discount
+
+
 class VitalSigns(models.Model):
     examination = models.OneToOneField(
         Examination, on_delete=models.CASCADE, related_name='vitals', verbose_name='Muayene'
@@ -57,3 +83,42 @@ class VitalSigns(models.Model):
             h_m = float(self.height) / 100
             self.bmi = round(float(self.weight) / (h_m ** 2), 2)
         super().save(*args, **kwargs)
+
+
+class ExaminationTemplate(models.Model):
+    """Doktora özel muayene şablonu — sık kullanılan notlar/tanılar."""
+    class Category(models.TextChoices):
+        GENERAL = 'GENERAL', 'Genel'
+        ENT = 'ENT', 'KBB'
+        CARDIOLOGY = 'CARDIOLOGY', 'Kardiyoloji'
+        ORTHOPEDICS = 'ORTHOPEDICS', 'Ortopedi'
+        PEDIATRICS = 'PEDIATRICS', 'Pediatri'
+        DERMATOLOGY = 'DERMATOLOGY', 'Dermatoloji'
+        NEUROLOGY = 'NEUROLOGY', 'Nöroloji'
+        OTHER = 'OTHER', 'Diğer'
+
+    name = models.CharField(max_length=200, verbose_name='Şablon Adı')
+    category = models.CharField(
+        max_length=20, choices=Category.choices, default=Category.GENERAL, verbose_name='Kategori'
+    )
+    complaint = models.TextField(blank=True, verbose_name='Şikayet')
+    findings = models.TextField(blank=True, verbose_name='Fizik Muayene Bulguları')
+    diagnosis = models.CharField(max_length=300, blank=True, verbose_name='Tanı')
+    icd10_code = models.CharField(max_length=20, blank=True, verbose_name='ICD-10 Kodu')
+    treatment_plan = models.TextField(blank=True, verbose_name='Tedavi Planı')
+    doctor_note = models.TextField(blank=True, verbose_name='Doktor Notu')
+    created_by = models.ForeignKey(
+        'accounts.CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='exam_templates', verbose_name='Oluşturan'
+    )
+    is_shared = models.BooleanField(default=False, verbose_name='Herkese Açık')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Muayene Şablonu'
+        verbose_name_plural = 'Muayene Şablonları'
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return f'{self.name} ({self.get_category_display()})'

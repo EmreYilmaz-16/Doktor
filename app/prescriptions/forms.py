@@ -6,7 +6,7 @@ from .models import Prescription, PrescriptionItem
 class PrescriptionForm(forms.ModelForm):
     class Meta:
         model = Prescription
-        fields = ['note', 'status']
+        fields = ['note']
         widgets = {
             'note': forms.Textarea(attrs={'rows': 3}),
         }
@@ -20,12 +20,18 @@ class PrescriptionItemForm(forms.ModelForm):
             'usage_instruction': forms.Textarea(attrs={'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Zorunlu olmayan alanları opsiyonel yap
+        self.fields['frequency'].required = False
+        self.fields['dosage'].required = False
+
 
 PrescriptionItemFormSet = inlineformset_factory(
     Prescription, PrescriptionItem,
     form=PrescriptionItemForm,
-    extra=3,
+    extra=0,
     can_delete=True,
-    min_num=1,
-    validate_min=True,
+    min_num=0,
+    validate_min=False,
 )

@@ -12,7 +12,7 @@
           Muayene — {{ examination.created_at|date:"d.m.Y" }}
         </h6>
         <div class="d-flex gap-2">
-          {% if user.is_doctor %}
+          {% if user.is_doctor or user.is_admin %}
           <a href="{% url 'examinations:update' examination.pk %}" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-pencil me-1"></i>Düzenle
           </a>
@@ -52,9 +52,6 @@
           </div>
         </div>
         {% endif %}
-
-        {% for field, label in examination.complaint,Şikayet|examination.anamnesis,Anamnez|examination.findings,Bulgular|examination.pre_diagnosis,Ön Tanı|examination.diagnosis,Kesin Tanı|examination.treatment_plan,Tedavi Planı|examination.result,Sonuç %}
-        {% endfor %}
 
         {% if examination.complaint %}
         <div class="mb-3">
@@ -134,8 +131,82 @@
     {% endif %}
   </div>
 
-  <!-- Belgeler -->
+  <!-- Belgeler + Yapılan İşlemler -->
   <div class="col-12 col-lg-4">
+
+    <!-- Yapılan İşlemler (Hizmetler) -->
+    <div class="card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+        <h6 class="mb-0 small fw-semibold"><i class="bi bi-receipt me-1 text-success"></i> Yapılan İşlemler</h6>
+        {% if user.is_admin %}
+        <a href="{% url 'payments:service_list' %}" class="btn btn-sm btn-outline-secondary" style="font-size:.7rem">Fiyat Listesi</a>
+        {% endif %}
+      </div>
+
+      {% if examination_services %}
+      <div class="list-group list-group-flush">
+        {% for svc in examination_services %}
+        <div class="list-group-item px-3 py-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1 me-2">
+              <small class="fw-semibold">{{ svc.description }}</small>
+              {% if svc.discount > 0 %}
+              <div style="font-size:.7rem" class="text-muted">
+                <span class="text-decoration-line-through">{{ svc.amount|floatformat:0 }} ₺</span>
+                <span class="text-success ms-1">{{ svc.net_amount|floatformat:0 }} ₺</span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <span class="fw-semibold text-nowrap">{{ svc.net_amount|floatformat:0 }} ₺</span>
+              <form method="post" action="{% url 'payments:service_delete' svc.pk %}" class="d-inline" onsubmit="return confirm('Bu hizmet silinsin mi?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger p-0 px-1">
+                  <i class="bi bi-trash3" style="font-size:.75rem"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="list-group-item px-3 py-2 bg-light d-flex justify-content-between">
+          <small class="fw-bold">Toplam Borçlandırma</small>
+          <span class="fw-bold text-danger">{{ examination_total|floatformat:0 }} ₺</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hizmet Ekle Formu -->
+      <div class="card-body border-top pt-2 pb-2">
+        <form method="post" action="{% url 'payments:examination_add' examination.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <select name="service" class="form-select form-select-sm" id="service-select" onchange="fillPrice(this)">
+              <option value="">— Hizmet seç veya kendiniz girin —</option>
+              {% for svc in services %}
+              <option value="{{ svc.pk }}" data-price="{{ svc.price }}">{{ svc.name }} ({{ svc.price|floatformat:0 }} ₺)</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <input type="text" name="description" class="form-control form-control-sm" placeholder="Açıklama (hizmet seçilmezse zorunlu)">
+          </div>
+          <div class="row g-1 mb-2">
+            <div class="col">
+              <input type="number" name="amount" id="amount-field" class="form-control form-control-sm" placeholder="Tutar ₺" step="0.01" min="0">
+            </div>
+            <div class="col">
+              <input type="number" name="discount" class="form-control form-control-sm" placeholder="İndirim ₺" step="0.01" min="0" value="0">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-sm btn-warning w-100">
+            <i class="bi bi-plus-circle me-1"></i> Borçlandır
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Belgeler -->
     <div class="card">
       <div class="card-header bg-white py-2">
         <h6 class="mb-0 small fw-semibold">Muayene Belgeleri</h6>
@@ -162,4 +233,64 @@
     </div>
   </div>
 </div>
+
+<!-- Ödeme Al Modal (muayene sayfası) -->
+<div class="modal fade" id="exCollectModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="ex-collect-form" action="">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="modal-header border-0 pb-0">
+          <h6 class="modal-title fw-bold">
+            <i class="bi bi-cash-coin me-1 text-success"></i> Ödeme Al
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-1 small text-muted" id="ex-modal-patient"></p>
+          <p class="mb-3 small" id="ex-modal-desc"></p>
+          <div class="fs-4 fw-bold text-success text-center mb-3" id="ex-modal-amount"></div>
+          <label class="form-label fw-semibold small">Ödeme Yöntemi</label>
+          <div class="d-grid gap-2">
+            <button type="submit" name="payment_type" value="CASH"
+              class="btn btn-outline-success btn-lg d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-cash fs-5"></i> Nakit
+            </button>
+            <button type="submit" name="payment_type" value="CARD"
+              class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-credit-card fs-5"></i> Kredi / Banka Kartı
+            </button>
+            <button type="submit" name="payment_type" value="TRANSFER"
+              class="btn btn-outline-info btn-lg d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-bank fs-5"></i> Havale / EFT
+            </button>
+            <button type="submit" name="payment_type" value="INSURANCE"
+              class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-shield-check fs-5"></i> Sigorta
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillPrice(sel) {
+  const price = sel.options[sel.selectedIndex].dataset.price;
+  if (price) document.getElementById('amount-field').value = price;
+}
+
+const exModal = document.getElementById('exCollectModal');
+if (exModal) {
+  exModal.addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('ex-collect-form').action = `/odemeler/${btn.dataset.pk}/tahsil/`;
+    document.getElementById('ex-modal-patient').textContent = btn.dataset.patient;
+    document.getElementById('ex-modal-desc').textContent = btn.dataset.desc;
+    document.getElementById('ex-modal-amount').textContent = btn.dataset.amount + ' ₺';
+  });
+}
+</script>
 {% endblock %}

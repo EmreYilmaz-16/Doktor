@@ -8,9 +8,19 @@
     <div class="card">
       <div class="card-header bg-white d-flex justify-content-between py-3">
         <h6 class="mb-0 fw-semibold"><i class="bi bi-prescription2 me-1"></i> Reçete #{{ prescription.pk }}</h6>
-        <a href="{% url 'prescriptions:pdf' prescription.pk %}" class="btn btn-sm btn-danger" target="_blank">
-          <i class="bi bi-file-pdf me-1"></i> PDF İndir
-        </a>
+        <div class="d-flex gap-2">
+          {% if prescription.status == 'ACTIVE' %}
+          <a href="{% url 'prescriptions:update' prescription.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i> Düzenle
+          </a>
+          {% endif %}
+          <a href="{% url 'prescriptions:print' prescription.pk %}" class="btn btn-sm btn-outline-success" target="_blank">
+            <i class="bi bi-printer me-1"></i> Yazdır
+          </a>
+          <a href="{% url 'prescriptions:pdf' prescription.pk %}" class="btn btn-sm btn-danger" target="_blank">
+            <i class="bi bi-file-pdf me-1"></i> PDF İndir
+          </a>
+        </div>
       </div>
       <div class="card-body">
         <div class="row g-2 mb-3">

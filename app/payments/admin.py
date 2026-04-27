@@ -9,6 +9,6 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('patient', 'amount', 'discount', 'payment_type', 'payment_status', 'created_at')
-    list_filter = ('payment_status', 'payment_type')
+    list_display = ('patient', 'amount', 'payment_type', 'description', 'created_at')
+    list_filter = ('payment_type',)
     search_fields = ('patient__name', 'patient__surname')

@@ -41,6 +41,7 @@
             <th>Telefon</th>
             <th>TC / Pasaport</th>
             <th>Kan Grubu</th>
+            <th class="text-end">Borç / Alacak</th>
             <th>Durum</th>
             <th>Kayıt Tarihi</th>
             <th></th>
@@ -61,6 +62,19 @@
               {% if patient.blood_type != '?' %}
               <span class="badge bg-danger rounded-pill">{{ patient.blood_type }}</span>
               {% else %}-{% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if patient.balance_type == 'debt' %}
+                <span class="text-danger fw-semibold">{{ patient.display_balance|floatformat:0 }} ₺</span>
+                <div class="text-muted" style="font-size:.7rem">borç</div>
+              {% elif patient.balance_type == 'credit' %}
+                <span class="text-primary fw-semibold">{{ patient.display_balance|floatformat:0 }} ₺</span>
+                <div class="text-muted" style="font-size:.7rem">alacak</div>
+              {% elif patient.total_charges == 0 and patient.total_payments == 0 %}
+                <span class="text-muted">-</span>
+              {% else %}
+                <span class="text-success fw-semibold"><i class="bi bi-check-circle"></i></span>
+              {% endif %}
             </td>
             <td>
               {% if patient.status == 'ACTIVE' %}

@@ -45,11 +45,28 @@
   <!-- Sağ: Muayene Formu -->
   <div class="col-12 col-lg-8">
     <div class="card">
-      <div class="card-header bg-white py-3">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-semibold">
           <i class="bi bi-clipboard2-pulse me-1 text-primary"></i>
           Muayene Kaydı — {{ patient.full_name }}
         </h6>
+        {% if exam_templates %}
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-journal-text me-1"></i> Şablon Uygula
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" style="min-width:260px">
+            {% for tpl in exam_templates %}
+            <li>
+              <a class="dropdown-item small" href="#" onclick="applyTemplate({{ tpl.pk }}); return false;">
+                <span class="badge bg-secondary me-1">{{ tpl.get_category_display }}</span>
+                {{ tpl.name }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
       <div class="card-body">
         <form method="post">
@@ -74,6 +91,9 @@
             </div>
           </div>
 
+          <!-- Doktor Seçimi (sadece doktor olmayan kullanıcılar için) -->
+          {{ form.doctor|as_crispy_field }}
+
           <!-- Klinik Bilgiler -->
           {{ form.complaint|as_crispy_field }}
           {{ form.anamnesis|as_crispy_field }}
@@ -83,6 +103,33 @@
             <div class="col-md-6">{{ form.diagnosis|as_crispy_field }}</div>
           </div>
           {{ form.icd10_code|as_crispy_field }}
+          <script>
+          (function() {
+            const field = document.querySelector('[name="icd10_code"]');
+            if (!field) return;
+            const listId = 'icd10-datalist';
+            let dl = document.createElement('datalist');
+            dl.id = listId;
+            field.setAttribute('list', listId);
+            field.setAttribute('autocomplete', 'off');
+            field.parentNode.appendChild(dl);
+            let timer;
+            field.addEventListener('input', function() {
+              clearTimeout(timer);
+              const q = this.value.trim();
+              if (q.length < 2) { dl.innerHTML = ''; return; }
+              timer = setTimeout(() => {
+                fetch(`{% url 'examinations:icd10_search' %}?q=${encodeURIComponent(q)}`)
+                  .then(r => r.json())
+                  .then(data => {
+                    dl.innerHTML = data.results.map(
+                      r => `<option value="${r.code}">${r.label}</option>`
+                    ).join('');
+                  });
+              }, 250);
+            });
+          })();
+          </script>
           {{ form.treatment_plan|as_crispy_field }}
           {{ form.result|as_crispy_field }}
           {{ form.doctor_note|as_crispy_field }}
@@ -99,4 +146,27 @@
     </div>
   </div>
 </div>
+
+{% if exam_templates %}
+<script>
+const TEMPLATE_API_BASE = "{% url 'examinations:template_api' 0 %}".replace('/0/', '/');
+function applyTemplate(pk) {
+  fetch(TEMPLATE_API_BASE + pk + '/api/')
+    .then(r => r.json())
+    .then(data => {
+      const set = (name, val) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el && val) { if (!el.value.trim()) el.value = val; }
+      };
+      set('complaint', data.complaint);
+      set('findings', data.findings);
+      set('diagnosis', data.diagnosis);
+      set('icd10_code', data.icd10_code);
+      set('treatment_plan', data.treatment_plan);
+      set('doctor_note', data.doctor_note);
+    })
+    .catch(() => alert('Şablon yüklenemedi.'));
+}
+</script>
+{% endif %}
 {% endblock %}

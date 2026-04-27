@@ -116,6 +116,18 @@ class AppointmentCreateView(LoginRequiredMixin, CreateView):
         patient_id = self.request.GET.get('patient')
         if patient_id:
             initial['patient'] = patient_id
+        # Takvimden tıklanınca gelen tarih/saat: ?start=2026-04-26T09:00:00
+        start = self.request.GET.get('start')
+        if start:
+            from datetime import datetime
+            try:
+                # FullCalendar dateStr: '2026-04-26T09:00:00' veya '2026-04-26'
+                dt_str = start[:16]  # 'YYYY-MM-DDTHH:MM'
+                if 'T' not in dt_str:
+                    dt_str += 'T08:00'
+                initial['appointment_start'] = dt_str
+            except Exception:
+                pass
         return initial
 
 

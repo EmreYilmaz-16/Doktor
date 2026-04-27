@@ -6,7 +6,7 @@ from django.views.generic import ListView, CreateView, UpdateView
 
 from core.mixins import AdminRequiredMixin
 from .forms import CustomUserCreationForm, CustomUserChangeForm
-from .models import CustomUser
+from .models import CustomUser, Role
 
 
 class UserListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
@@ -23,8 +23,13 @@ class UserCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     success_url = reverse_lazy('accounts:user_list')
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.object
+        if user.role == Role.DOCTOR:
+            from appointments.models import Doctor
+            Doctor.objects.get_or_create(user=user)
         messages.success(self.request, 'Kullanıcı başarıyla oluşturuldu.')
-        return super().form_valid(form)
+        return response
 
 
 class UserUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
@@ -34,8 +39,13 @@ class UserUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     success_url = reverse_lazy('accounts:user_list')
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.object
+        if user.role == Role.DOCTOR:
+            from appointments.models import Doctor
+            Doctor.objects.get_or_create(user=user)
         messages.success(self.request, 'Kullanıcı başarıyla güncellendi.')
-        return super().form_valid(form)
+        return response
 
 
 class ChangePasswordView(LoginRequiredMixin, PasswordChangeView):

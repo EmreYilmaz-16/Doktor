@@ -89,14 +89,31 @@ class PatientMedicalInfo(models.Model):
 
 
 class PatientConsent(models.Model):
+    class ConsentType(models.TextChoices):
+        KVKK = 'KVKK', 'KVKK Aydınlatma Metni'
+        COMMUNICATION = 'COMMUNICATION', 'İletişim İzni'
+        TREATMENT = 'TREATMENT', 'Tedavi Onamı'
+        SURGERY = 'SURGERY', 'Ameliyat Onamı'
+        PHOTOGRAPHY = 'PHOTOGRAPHY', 'Fotoğraf / Video İzni'
+        OTHER = 'OTHER', 'Diğer'
+
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='consents', verbose_name='Hasta')
-    consent_type = models.CharField(max_length=50, verbose_name='Onay Türü')  # KVKK, COMMUNICATION, etc.
+    consent_type = models.CharField(max_length=20, choices=ConsentType.choices, default=ConsentType.KVKK, verbose_name='Onay Türü')
     approved = models.BooleanField(default=False, verbose_name='Onaylandı')
     approved_at = models.DateTimeField(null=True, blank=True, verbose_name='Onay Tarihi')
+    approved_by = models.ForeignKey(
+        'accounts.CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Kaydeden', related_name='recorded_consents',
+    )
     ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP Adresi')
     consent_text_version = models.CharField(max_length=20, default='1.0', verbose_name='Metin Versiyonu')
+    notes = models.TextField(blank=True, verbose_name='Notlar')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'KVKK Onay'
         verbose_name_plural = 'KVKK Onayları'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.patient.full_name} — {self.get_consent_type_display()} — {"✓" if self.approved else "✗"}'

@@ -39,7 +39,6 @@ class ReportDashboardView(LoginRequiredMixin, TemplateView):
         # Aylık gelir (son 6 ay)
         monthly_income = (
             Payment.objects
-            .filter(payment_status='PAID')
             .annotate(month=TruncMonth('created_at'))
             .values('month')
             .annotate(total=Sum('amount'))
@@ -56,7 +55,7 @@ class ReportDashboardView(LoginRequiredMixin, TemplateView):
             appointment_start__date__gte=month_start
         ).count()
         ctx['month_income'] = (
-            Payment.objects.filter(created_at__date__gte=month_start, payment_status='PAID')
+            Payment.objects.filter(created_at__date__gte=month_start)
             .aggregate(total=Sum('amount'))['total'] or 0
         )
         ctx['no_show_count'] = Appointment.objects.filter(

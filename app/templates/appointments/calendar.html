@@ -74,6 +74,11 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = info.event.url;
       info.jsEvent.preventDefault();
     },
+    dateClick: function(info) {
+      const url = new URL('{% url "appointments:create" %}', window.location.origin);
+      url.searchParams.set('start', info.dateStr);
+      window.location.href = url.toString();
+    },
     eventDidMount: function(info) {
       const props = info.event.extendedProps;
       const tip = `${props.doctor}\n${props.status}\n${props.type}`;

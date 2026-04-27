@@ -24,12 +24,19 @@ class DocumentListView(LoginRequiredMixin, ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Document.objects.filter(patient=self.patient).order_by('-created_at')
+        qs = Document.objects.filter(patient=self.patient).order_by('-created_at')
+        cat = self.request.GET.get('category', '')
+        if cat:
+            qs = qs.filter(category=cat)
+        return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['patient'] = self.patient
         ctx['upload_form'] = DocumentUploadForm(patient=self.patient)
+        from .models import DocumentCategory
+        ctx['categories'] = DocumentCategory.choices
+        ctx['selected_category'] = self.request.GET.get('category', '')
         return ctx
 
 
@@ -42,10 +49,22 @@ class DocumentUploadView(LoginRequiredMixin, CreateView):
         self.patient = get_object_or_404(Patient, pk=kwargs['patient_pk'])
         return super().dispatch(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        # GET isteği doğrudan liste sayfasına yönlendir
+        from django.shortcuts import redirect
+        return redirect('documents:list', patient_pk=self.patient.pk)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['patient'] = self.patient
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['patient'] = self.patient
+        ctx['upload_form'] = ctx.pop('form')  # form → upload_form olarak yeniden adlandır
+        ctx['documents'] = Document.objects.filter(patient=self.patient).order_by('-created_at')
+        return ctx
 
     def form_valid(self, form):
         form.instance.patient = self.patient

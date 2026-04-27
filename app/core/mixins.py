@@ -70,3 +70,15 @@ def create_audit_log(request, action, entity_type, entity_id=None, description='
         ip_address=get_client_ip(request),
         user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
     )
+
+
+def send_notification(recipient, title, message='', link='', notification_type='INFO'):
+    """Kullanıcıya sistem içi bildirim gönder."""
+    from .models import Notification
+    Notification.objects.create(
+        recipient=recipient,
+        title=title,
+        message=message,
+        link=link,
+        notification_type=notification_type,
+    )

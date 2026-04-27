@@ -1,62 +1,329 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
-{% block title %}Reçete Yaz{% endblock %}
-{% block page_title %}Reçete Oluştur{% endblock %}
+{% block title %}{% if is_edit %}Reçete Düzenle{% else %}Reçete Yaz{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Reçete Düzenle{% else %}Reçete Yaz{% endif %}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-12 col-lg-9">
-    {% if allergies %}
-    <div class="alert alert-danger">
-      <i class="bi bi-exclamation-triangle-fill me-2"></i>
-      <strong>Alerji Uyarısı:</strong> {{ allergies }}
-    </div>
-    {% endif %}
 
-    <div class="card">
-      <div class="card-header bg-white py-3">
-        <h6 class="mb-0 fw-semibold">
-          <i class="bi bi-prescription2 me-1 text-success"></i>
-          Reçete — {{ patient.full_name }}
-        </h6>
-      </div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          {{ form.note|as_crispy_field }}
-
-          <h6 class="fw-semibold mt-3 mb-2">İlaçlar</h6>
-          {{ item_formset.management_form }}
-          <div id="formset-container">
-            {% for item_form in item_formset %}
-            <div class="card mb-2 item-form">
-              <div class="card-body py-2">
-                {{ item_form.id }}
-                <div class="row g-2">
-                  <div class="col-md-6">{{ item_form.medicine_name|as_crispy_field }}</div>
-                  <div class="col-md-6">{{ item_form.active_ingredient|as_crispy_field }}</div>
-                  <div class="col-md-4">{{ item_form.dosage|as_crispy_field }}</div>
-                  <div class="col-md-4">{{ item_form.frequency|as_crispy_field }}</div>
-                  <div class="col-md-4">{{ item_form.duration|as_crispy_field }}</div>
-                  <div class="col-12">{{ item_form.usage_instruction|as_crispy_field }}</div>
-                </div>
-                {% if item_form.DELETE %}
-                <div class="text-end">{{ item_form.DELETE }} <label class="text-danger small">Sil</label></div>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <div class="mt-3 d-flex gap-2">
-            <button type="submit" class="btn btn-success fw-semibold">
-              <i class="bi bi-check-circle me-1"></i> Reçeteyi Kaydet
-            </button>
-            <a href="{% url 'examinations:detail' examination.pk %}" class="btn btn-outline-secondary">İptal</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+{% if allergies %}
+<div class="alert alert-danger d-flex align-items-center mb-3">
+  <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+  <div><strong>Alerji Uyarısı:</strong> {{ allergies }}</div>
 </div>
+{% endif %}
+
+<!-- Hasta bilgi şeridi -->
+<div class="d-flex align-items-center gap-3 mb-3 p-3 bg-white rounded border">
+  <i class="bi bi-person-circle text-primary" style="font-size:2rem"></i>
+  <div>
+    <div class="fw-bold">{{ patient.full_name }}</div>
+    <small class="text-muted">
+      {% if patient.birth_date %}{{ patient.birth_date|date:"d.m.Y" }} · {% endif %}
+      Muayene #{{ examination.pk }}
+    </small>
+  </div>
+  <a href="{% url 'examinations:detail' examination.pk %}" class="btn btn-sm btn-outline-secondary ms-auto">
+    <i class="bi bi-arrow-left me-1"></i> Muayeneye Dön
+  </a>
+</div>
+
+<form method="post" id="rx-form">
+  {% csrf_token %}
+
+  <!-- Gizli Django formset -->
+  <div id="formset-store" style="display:none">
+    {{ item_formset.management_form }}
+    {% for item_form in item_formset %}
+    <div class="fs-row" id="fs-row-{{ forloop.counter0 }}" data-idx="{{ forloop.counter0 }}">
+      {{ item_form.id }}
+      {{ item_form.medicine_name }}
+      {{ item_form.active_ingredient }}
+      {{ item_form.dosage }}
+      {{ item_form.frequency }}
+      {{ item_form.duration }}
+      {{ item_form.usage_instruction }}
+      {{ item_form.note }}
+      {% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="row g-3">
+
+    <!-- SOL: İlaç Ekle Paneli -->
+    <div class="col-12 col-lg-5">
+      <div class="card h-100">
+        <div class="card-header bg-white py-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-capsule me-1 text-primary"></i> İlaç Ekle
+          </h6>
+        </div>
+        <div class="card-body">
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold small">İlaç Adı <span class="text-danger">*</span></label>
+            <input type="text" id="inp-medicine" class="form-control" placeholder="örn. Augmentin 1000mg">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small text-muted">Etken Madde</label>
+            <input type="text" id="inp-active" class="form-control form-control-sm" placeholder="Amoksisilin + Klavulanik Asit">
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label small fw-semibold">Doz <span class="text-danger">*</span></label>
+              <input type="text" id="inp-dosage" class="form-control form-control-sm" placeholder="1×1">
+            </div>
+            <div class="col-4">
+              <label class="form-label small fw-semibold">Sıklık</label>
+              <input type="text" id="inp-freq" class="form-control form-control-sm" list="freq-list" placeholder="Günde 2×">
+              <datalist id="freq-list">
+                <option value="Günde 1×">
+                <option value="Günde 2×">
+                <option value="Günde 3×">
+                <option value="Sabah–Akşam">
+                <option value="Yemeklerden önce">
+                <option value="Yemeklerden sonra">
+                <option value="Gerektiğinde">
+              </datalist>
+            </div>
+            <div class="col-4">
+              <label class="form-label small fw-semibold">Süre</label>
+              <input type="text" id="inp-duration" class="form-control form-control-sm" list="dur-list" placeholder="5 gün">
+              <datalist id="dur-list">
+                <option value="3 gün">
+                <option value="5 gün">
+                <option value="7 gün">
+                <option value="10 gün">
+                <option value="14 gün">
+                <option value="1 ay">
+                <option value="Süresiz">
+              </datalist>
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small text-muted">Kullanım Talimatı</label>
+            <textarea id="inp-instruction" class="form-control form-control-sm" rows="2" placeholder="Yemeklerden sonra bol su ile..."></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Not</label>
+            <input type="text" id="inp-note" class="form-control form-control-sm" placeholder="Buzdolabında saklayın...">
+          </div>
+          <button type="button" class="btn btn-primary w-100 fw-semibold" onclick="addToCart()">
+            <i class="bi bi-cart-plus me-1"></i> Sepete Ekle
+          </button>
+          <div id="add-error" class="text-danger small mt-2" style="display:none">
+            İlaç adı ve doz zorunludur.
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SAĞ: Reçete Sepeti -->
+    <div class="col-12 col-lg-7">
+      <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-prescription2 me-1 text-success"></i>
+            Reçete Sepeti
+            <span id="cart-count" class="badge bg-success ms-1">0</span>
+          </h6>
+          <span class="text-muted small">{{ patient.full_name }}</span>
+        </div>
+
+        <!-- Sepet öğeleri -->
+        <div id="cart-list" class="list-group list-group-flush">
+          <!-- JS ile doldurulur -->
+        </div>
+
+        <div id="cart-empty" class="text-center text-muted py-5">
+          <i class="bi bi-cart-x" style="font-size:2.5rem;opacity:.3"></i>
+          <p class="mt-2 mb-0 small">Henüz ilaç eklenmedi.</p>
+          <p class="small">Sol taraftan ilaç ekleyin.</p>
+        </div>
+
+        <!-- Reçete Notu -->
+        <div class="card-body border-top">
+          <label class="form-label fw-semibold small">Reçete Notu</label>
+          <textarea name="{{ form.note.html_name }}" class="form-control form-control-sm" rows="2"
+            placeholder="Kontrol tarihi, genel notlar...">{{ form.note.value|default:'' }}</textarea>
+        </div>
+
+        <!-- Kaydet Butonu -->
+        <div class="card-footer bg-white d-flex gap-2">
+          <button type="submit" class="btn btn-success fw-semibold flex-grow-1" id="save-btn" {% if not is_edit %}disabled{% endif %}>
+            <i class="bi bi-check-circle me-1"></i> {% if is_edit %}Değişiklikleri Kaydet{% else %}Reçeteyi Kaydet{% endif %}
+          </button>
+          <a href="{% url 'examinations:detail' examination.pk %}" class="btn btn-outline-secondary">İptal</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<style>
+  .cart-item { transition: background .15s; }
+  .cart-item:hover { background: #f8f9fa; }
+  .cart-item .item-badge {
+    font-size: .68rem; padding: .2rem .5rem;
+    border-radius: 999px; background: #e9ecef; color: #495057;
+    white-space: nowrap;
+  }
+  .cart-remove-btn { opacity: .5; transition: opacity .15s; }
+  .cart-remove-btn:hover { opacity: 1; }
+</style>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  const PREFIX = 'items';
+  let totalForms = parseInt(document.querySelector(`[name="${PREFIX}-TOTAL_FORMS"]`).value);
+  const initialForms = parseInt(document.querySelector(`[name="${PREFIX}-INITIAL_FORMS"]`).value);
+
+  // Mevcut (DB'den gelen) ilaçları sepete yükle
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.fs-row').forEach(row => {
+      const idx = row.dataset.idx;
+      const nameVal = row.querySelector(`[name="${PREFIX}-${idx}-medicine_name"]`).value;
+      if (!nameVal) return; // boş extra form
+      const data = {
+        idx: idx,
+        existing: true,
+        medicine_name: nameVal,
+        active_ingredient: row.querySelector(`[name="${PREFIX}-${idx}-active_ingredient"]`).value,
+        dosage: row.querySelector(`[name="${PREFIX}-${idx}-dosage"]`).value,
+        frequency: row.querySelector(`[name="${PREFIX}-${idx}-frequency"]`).value,
+        duration: row.querySelector(`[name="${PREFIX}-${idx}-duration"]`).value,
+        usage_instruction: row.querySelector(`[name="${PREFIX}-${idx}-usage_instruction"]`).value,
+        note: row.querySelector(`[name="${PREFIX}-${idx}-note"]`).value,
+      };
+      renderCartItem(data);
+    });
+    updateCounter();
+  });
+
+  // ─── Sepete Ekle ─────────────────────────────────────────────────────────
+  function addToCart() {
+    const medicine = document.getElementById('inp-medicine').value.trim();
+    const dosage   = document.getElementById('inp-dosage').value.trim();
+    const errEl    = document.getElementById('add-error');
+
+    if (!medicine || !dosage) { errEl.style.display = ''; return; }
+    errEl.style.display = 'none';
+
+    const data = {
+      idx: totalForms,
+      existing: false,
+      medicine_name: medicine,
+      active_ingredient: document.getElementById('inp-active').value.trim(),
+      dosage: dosage,
+      frequency: document.getElementById('inp-freq').value.trim(),
+      duration: document.getElementById('inp-duration').value.trim(),
+      usage_instruction: document.getElementById('inp-instruction').value.trim(),
+      note: document.getElementById('inp-note').value.trim(),
+    };
+
+    // Gizli formset satırı ekle
+    addHiddenRow(data);
+    totalForms++;
+    document.querySelector(`[name="${PREFIX}-TOTAL_FORMS"]`).value = totalForms;
+
+    // Görsel kart ekle
+    renderCartItem(data);
+    updateCounter();
+
+    // Inputları temizle
+    ['inp-medicine','inp-active','inp-dosage','inp-freq','inp-duration','inp-instruction','inp-note']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('inp-medicine').focus();
+  }
+
+  function addHiddenRow(data) {
+    const store = document.getElementById('formset-store');
+    const div = document.createElement('div');
+    div.className = 'fs-row';
+    div.id = `fs-row-${data.idx}`;
+    div.innerHTML = `
+      <input type="hidden" name="${PREFIX}-${data.idx}-medicine_name"     value="${esc(data.medicine_name)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-active_ingredient"  value="${esc(data.active_ingredient)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-dosage"             value="${esc(data.dosage)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-frequency"          value="${esc(data.frequency)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-duration"           value="${esc(data.duration)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-usage_instruction"  value="${esc(data.usage_instruction)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-note"               value="${esc(data.note)}">
+      <input type="hidden" name="${PREFIX}-${data.idx}-id"                 value="">
+    `;
+    store.appendChild(div);
+  }
+
+  // ─── Sepetten Çıkar ──────────────────────────────────────────────────────
+  function removeFromCart(idx, existing) {
+    // Görsel kartı kaldır
+    document.getElementById(`cart-item-${idx}`)?.remove();
+
+    if (existing) {
+      // DB'deki kayıt: DELETE işaretle
+      const deleteInput = document.querySelector(`[name="${PREFIX}-${idx}-DELETE"]`);
+      if (deleteInput) deleteInput.checked = true;
+    } else {
+      // Yeni eklenmiş: hidden row'u kaldır
+      document.getElementById(`fs-row-${idx}`)?.remove();
+    }
+    updateCounter();
+  }
+
+  // ─── Görsel Kart ─────────────────────────────────────────────────────────
+  function renderCartItem(data) {
+    const list = document.getElementById('cart-list');
+    const empty = document.getElementById('cart-empty');
+    empty.style.display = 'none';
+
+    const div = document.createElement('div');
+    div.className = 'list-group-item cart-item px-3 py-2';
+    div.id = `cart-item-${data.idx}`;
+
+    const badges = [];
+    if (data.dosage)     badges.push(`<span class="item-badge"><i class="bi bi-capsule me-1"></i>${esc(data.dosage)}</span>`);
+    if (data.frequency)  badges.push(`<span class="item-badge"><i class="bi bi-clock me-1"></i>${esc(data.frequency)}</span>`);
+    if (data.duration)   badges.push(`<span class="item-badge"><i class="bi bi-calendar3 me-1"></i>${esc(data.duration)}</span>`);
+
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 me-2">
+          <div class="fw-semibold">${esc(data.medicine_name)}</div>
+          ${data.active_ingredient ? `<small class="text-muted">${esc(data.active_ingredient)}</small><br>` : ''}
+          <div class="d-flex flex-wrap gap-1 mt-1">${badges.join('')}</div>
+          ${data.usage_instruction ? `<small class="text-muted fst-italic d-block mt-1">${esc(data.usage_instruction)}</small>` : ''}
+          ${data.note ? `<small class="text-warning"><i class="bi bi-sticky me-1"></i>${esc(data.note)}</small>` : ''}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger cart-remove-btn" onclick="removeFromCart(${data.idx}, ${data.existing})">
+          <i class="bi bi-trash3"></i>
+        </button>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
+  // ─── Yardımcı ────────────────────────────────────────────────────────────
+  function updateCounter() {
+    const count = document.querySelectorAll('.cart-item').length;
+    document.getElementById('cart-count').textContent = count;
+    document.getElementById('save-btn').disabled = count === 0;
+    if (count === 0) document.getElementById('cart-empty').style.display = '';
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Enter ile sepete ekle
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement?.closest('#rx-form') &&
+        !document.activeElement?.matches('textarea, button, a')) {
+      e.preventDefault();
+      addToCart();
+    }
+  });
+</script>
+
 {% endblock %}
+

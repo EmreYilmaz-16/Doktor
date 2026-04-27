@@ -85,6 +85,11 @@
     <a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a>
+    {% if user.is_secretary %}
+    <a href="{% url 'core:secretary_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'secretary_dashboard' %}active{% endif %}">
+      <i class="bi bi-person-badge"></i> Sekreter Paneli
+    </a>
+    {% endif %}
 
     <span class="nav-section">Klinik</span>
     <a href="{% url 'patients:list' %}" class="nav-link {% if request.resolver_match.namespace == 'patients' %}active{% endif %}">
@@ -96,10 +101,24 @@
     <a href="{% url 'appointments:list' %}" class="nav-link {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'list' %}active{% endif %}">
       <i class="bi bi-list-check"></i> Randevu Listesi
     </a>
+    <a href="{% url 'examinations:list' %}" class="nav-link {% if request.resolver_match.namespace == 'examinations' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+      <i class="bi bi-clipboard2-pulse"></i> Muayeneler
+    </a>
+    {% if user.is_doctor or user.is_admin %}
+    <a href="{% url 'examinations:template_list' %}" class="nav-link {% if request.resolver_match.url_name == 'template_list' or request.resolver_match.url_name == 'template_create' or request.resolver_match.url_name == 'template_update' %}active{% endif %}">
+      <i class="bi bi-journal-text"></i> Muayene Şablonları
+    </a>
+    {% endif %}
+    <a href="{% url 'prescriptions:list' %}" class="nav-link {% if request.resolver_match.namespace == 'prescriptions' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+      <i class="bi bi-prescription2"></i> Reçeteler
+    </a>
 
     <span class="nav-section">Mali</span>
-    <a href="{% url 'payments:list' %}" class="nav-link {% if request.resolver_match.namespace == 'payments' %}active{% endif %}">
+    <a href="{% url 'payments:list' %}" class="nav-link {% if request.resolver_match.namespace == 'payments' and request.resolver_match.url_name == 'list' %}active{% endif %}">
       <i class="bi bi-cash-coin"></i> Ödemeler
+    </a>
+    <a href="{% url 'payments:service_list' %}" class="nav-link {% if request.resolver_match.namespace == 'payments' and request.resolver_match.url_name == 'service_list' %}active{% endif %}">
+      <i class="bi bi-list-stars"></i> Hizmet Fiyatları
     </a>
 
     <span class="nav-section">Raporlar</span>
@@ -136,6 +155,11 @@
         <i class="bi bi-person-circle me-1"></i>{{ user.get_full_name|default:user.username }}
         <span class="badge bg-secondary ms-1">{{ user.get_role_display }}</span>
       </span>
+      <!-- Bildirim Zili -->
+      <a href="{% url 'core:notifications' %}" class="btn btn-sm btn-outline-secondary position-relative" id="notif-bell" title="Bildirimler">
+        <i class="bi bi-bell"></i>
+        <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;font-size:.6rem"></span>
+      </a>
       <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger">
         <i class="bi bi-box-arrow-right"></i> Çıkış
       </a>
@@ -162,5 +186,27 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block extra_js %}{% endblock %}
+{% if user.is_authenticated %}
+<script>
+  // Bildirim sayacını her 60 sn güncelle
+  function fetchNotifCount() {
+    fetch("{% url 'core:notification_count' %}")
+      .then(r => r.json())
+      .then(data => {
+        const badge = document.getElementById('notif-badge');
+        if (badge) {
+          if (data.count > 0) {
+            badge.textContent = data.count > 99 ? '99+' : data.count;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }).catch(() => {});
+  }
+  fetchNotifCount();
+  setInterval(fetchNotifCount, 60000);
+</script>
+{% endif %}
 </body>
 </html>
