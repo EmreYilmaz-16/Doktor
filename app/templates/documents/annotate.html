@@ -203,17 +203,27 @@
 
     // Kaydedilmiş notları yükle
     if (SAVED_DATA && SAVED_DATA.objects && SAVED_DATA.objects.length) {
-      // Görüntü objesini geçici olarak kaldır, notları yükle, geri ekle
+      const savedW = SAVED_DATA.width || cW;
+      const savedH = SAVED_DATA.height || cH;
+
+      // width/height'i mevcut canvas boyutuna ayarla —
+      // Fabric.js bu değerleri görünce canvas'ı küçültüyor, önlüyoruz
+      const fabricJSON = Object.assign({}, SAVED_DATA, { width: cW, height: cH });
+
       canvas.remove(img);
-      canvas.loadFromJSON(SAVED_DATA, function () {
+      canvas.loadFromJSON(fabricJSON, function () {
+        // Canvas boyutunu garantiye al
+        canvas.setWidth(cW);
+        canvas.setHeight(cH);
+
         // Farklı ekran boyutlarında koordinatları yeniden ölçekle
-        if (SAVED_DATA.width && (SAVED_DATA.width !== cW || SAVED_DATA.height !== cH)) {
-          const sx = cW / SAVED_DATA.width;
-          const sy = cH / SAVED_DATA.height;
+        if (savedW !== cW || savedH !== cH) {
+          const sx = cW / savedW;
+          const sy = cH / savedH;
           canvas.getObjects().forEach(function (obj) {
             obj.set({
-              left: obj.left * sx,
-              top:  obj.top  * sy,
+              left:   obj.left   * sx,
+              top:    obj.top    * sy,
               scaleX: (obj.scaleX || 1) * sx,
               scaleY: (obj.scaleY || 1) * sy,
             });
