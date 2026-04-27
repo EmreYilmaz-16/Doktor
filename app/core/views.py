@@ -1,7 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView, ListView
 from django.views import View
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
 from django.db.models import Sum
 from datetime import date, timedelta
 
@@ -13,6 +14,11 @@ from .models import AuditLog, Notification
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_secretary and not request.user.is_admin:
+            return HttpResponseRedirect(reverse('core:secretary_dashboard'))
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

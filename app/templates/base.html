@@ -85,11 +85,7 @@
     <a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a>
-    {% if user.is_secretary %}
-    <a href="{% url 'core:secretary_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'secretary_dashboard' %}active{% endif %}">
-      <i class="bi bi-person-badge"></i> Sekreter Paneli
-    </a>
-    {% endif %}
+
 
     <span class="nav-section">Klinik</span>
     <a href="{% url 'patients:list' %}" class="nav-link {% if request.resolver_match.namespace == 'patients' %}active{% endif %}">
