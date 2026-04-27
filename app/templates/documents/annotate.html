@@ -206,6 +206,20 @@
       // Görüntü objesini geçici olarak kaldır, notları yükle, geri ekle
       canvas.remove(img);
       canvas.loadFromJSON(SAVED_DATA, function () {
+        // Farklı ekran boyutlarında koordinatları yeniden ölçekle
+        if (SAVED_DATA.width && (SAVED_DATA.width !== cW || SAVED_DATA.height !== cH)) {
+          const sx = cW / SAVED_DATA.width;
+          const sy = cH / SAVED_DATA.height;
+          canvas.getObjects().forEach(function (obj) {
+            obj.set({
+              left: obj.left * sx,
+              top:  obj.top  * sy,
+              scaleX: (obj.scaleX || 1) * sx,
+              scaleY: (obj.scaleY || 1) * sy,
+            });
+            obj.setCoords();
+          });
+        }
         canvas.add(img);
         canvas.sendToBack(img);
         canvas.renderAll();
