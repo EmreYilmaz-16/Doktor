@@ -1,10 +1,10 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import DetailView, CreateView, UpdateView, ListView
 from django.views import View
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.db.models import Q
 
 from core.mixins import create_audit_log
@@ -25,6 +25,13 @@ class ExaminationCreateView(LoginRequiredMixin, CreateView):
         apt_pk = kwargs.get('appointment_pk')
         if apt_pk:
             self.appointment = get_object_or_404(Appointment, pk=apt_pk)
+            # Randevunun zaten bir muayenesi varsa mevcut muayeneye yönlendir
+            try:
+                existing_exam = self.appointment.examination
+                messages.info(request, 'Bu randevu için zaten bir muayene kaydı mevcut.')
+                return HttpResponseRedirect(reverse('examinations:detail', kwargs={'pk': existing_exam.pk}))
+            except Examination.DoesNotExist:
+                pass
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
