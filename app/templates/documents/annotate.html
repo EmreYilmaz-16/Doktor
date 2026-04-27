@@ -124,10 +124,33 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+.color-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  display: inline-block;
+}
+.color-btn.active {
+  border-color: #333;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333;
+}
+#annotation-canvas {
+  display: block;
+  max-width: 100%;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <!-- Fabric.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-
 <script>
 (function () {
   'use strict';
@@ -534,24 +557,4 @@
 
 })();
 </script>
-
-<style>
-.color-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-  display: inline-block;
-}
-.color-btn.active {
-  border-color: #333;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333;
-}
-#annotation-canvas {
-  display: block;
-  max-width: 100%;
-}
-</style>
 {% endblock %}
