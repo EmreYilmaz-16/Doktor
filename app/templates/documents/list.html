@@ -84,6 +84,11 @@
                   <a href="{% url 'documents:download' doc.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
                     <i class="bi bi-download"></i>
                   </a>
+                  {% if doc.is_image %}
+                  <a href="{% url 'documents:annotate' doc.pk %}" class="btn btn-sm btn-outline-info" title="Görüntüye Not Ekle">
+                    <i class="bi bi-pencil-square"></i>
+                  </a>
+                  {% endif %}
                   <a href="{% url 'documents:delete' doc.pk %}" class="btn btn-sm btn-outline-danger">
                     <i class="bi bi-trash"></i>
                   </a>

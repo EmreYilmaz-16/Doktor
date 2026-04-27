@@ -65,6 +65,7 @@ class Document(models.Model):
     description = models.CharField(max_length=300, blank=True, verbose_name='Açıklama')
     file_size = models.PositiveIntegerField(default=0, verbose_name='Dosya Boyutu (bayt)')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yükleme Tarihi')
+    annotations = models.JSONField(default=dict, blank=True, verbose_name='Notlar')
 
     class Meta:
         verbose_name = 'Belge'

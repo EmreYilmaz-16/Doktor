@@ -1,12 +1,13 @@
 import os
+import json
 import mimetypes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, CreateView, DeleteView
 from django.views import View
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.shortcuts import get_object_or_404
-from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, render
+from django.http import FileResponse, Http404, JsonResponse
 
 from core.mixins import create_audit_log
 from patients.models import Patient
@@ -123,3 +124,35 @@ class DocumentDeleteView(LoginRequiredMixin, DeleteView):
         except Exception:
             pass
         return super().form_valid(form)
+
+
+class DocumentAnnotateView(LoginRequiredMixin, View):
+    """Görüntü üzerine not/çizim ekleme sayfası."""
+
+    def get(self, request, pk):
+        doc = get_object_or_404(Document, pk=pk)
+        if not doc.is_image:
+            messages.error(request, 'Yalnızca görüntü dosyaları not eklenebilir.')
+            from django.shortcuts import redirect
+            return redirect('documents:list', patient_pk=doc.patient.pk)
+        create_audit_log(
+            request, 'VIEW', 'Document', pk,
+            f'Belge notları görüntülendi: {doc.original_filename}'
+        )
+        return render(request, 'documents/annotate.html', {'doc': doc})
+
+    def post(self, request, pk):
+        doc = get_object_or_404(Document, pk=pk)
+        if not doc.is_image:
+            return JsonResponse({'error': 'Görüntü değil'}, status=400)
+        try:
+            data = json.loads(request.body)
+            doc.annotations = data.get('annotations', {})
+            doc.save(update_fields=['annotations'])
+            create_audit_log(
+                request, 'EDIT', 'Document', pk,
+                f'Belge notları güncellendi: {doc.original_filename}'
+            )
+            return JsonResponse({'status': 'ok'})
+        except (json.JSONDecodeError, Exception) as e:
+            return JsonResponse({'error': str(e)}, status=400)

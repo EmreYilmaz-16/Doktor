@@ -1,0 +1,557 @@
+{% extends 'base.html' %}
+{% block title %}Görüntü Notları — {{ doc.original_filename }}{% endblock %}
+{% block page_title %}
+  <a href="{% url 'documents:list' doc.patient.pk %}" class="text-decoration-none text-muted small">
+    <i class="bi bi-arrow-left me-1"></i>Belgeler
+  </a>
+  <span class="mx-2 text-muted">/</span>
+  {{ doc.original_filename|truncatechars:40 }}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Araç Çubuğu -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+
+          <!-- Mod seçimi -->
+          <div class="btn-group btn-group-sm" role="group" aria-label="Çizim modu">
+            <button type="button" class="btn btn-outline-secondary active" id="btn-select" title="Seç / Taşı">
+              <i class="bi bi-cursor"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-pen" title="Serbest Çizim">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-rect" title="Dikdörtgen">
+              <i class="bi bi-square"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-circle" title="Daire">
+              <i class="bi bi-circle"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-arrow" title="Ok">
+              <i class="bi bi-arrow-up-right"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-text" title="Metin">
+              <i class="bi bi-fonts"></i>
+            </button>
+          </div>
+
+          <!-- Renk -->
+          <div class="d-flex align-items-center gap-1">
+            <label class="small text-muted mb-0">Renk:</label>
+            <div class="d-flex gap-1">
+              <button class="color-btn active" style="background:#e74c3c" data-color="#e74c3c" title="Kırmızı"></button>
+              <button class="color-btn" style="background:#f39c12" data-color="#f39c12" title="Turuncu"></button>
+              <button class="color-btn" style="background:#27ae60" data-color="#27ae60" title="Yeşil"></button>
+              <button class="color-btn" style="background:#2980b9" data-color="#2980b9" title="Mavi"></button>
+              <button class="color-btn" style="background:#8e44ad" data-color="#8e44ad" title="Mor"></button>
+              <button class="color-btn" style="background:#f1c40f" data-color="#f1c40f" title="Sarı"></button>
+              <button class="color-btn" style="background:#fff;border:1px solid #ccc" data-color="#ffffff" title="Beyaz"></button>
+              <input type="color" id="custom-color" value="#e74c3c" title="Özel renk"
+                class="form-control form-control-sm p-0 border-0" style="width:28px;height:28px;cursor:pointer">
+            </div>
+          </div>
+
+          <!-- Çizgi kalınlığı -->
+          <div class="d-flex align-items-center gap-1">
+            <label class="small text-muted mb-0">Kalınlık:</label>
+            <input type="range" id="stroke-width" min="1" max="20" value="3" class="form-range" style="width:80px">
+            <span id="stroke-label" class="small text-muted">3px</span>
+          </div>
+
+          <!-- Yazı boyutu (metin modunda görünür) -->
+          <div class="d-flex align-items-center gap-1" id="font-size-group" style="display:none!important">
+            <label class="small text-muted mb-0">Yazı:</label>
+            <select id="font-size" class="form-select form-select-sm" style="width:70px">
+              <option value="14">14</option>
+              <option value="18" selected>18</option>
+              <option value="24">24</option>
+              <option value="32">32</option>
+              <option value="48">48</option>
+            </select>
+          </div>
+
+          <!-- Eylemler -->
+          <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-sm btn-outline-danger" id="btn-delete" title="Seçili sil">
+              <i class="bi bi-trash"></i> Sil
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" id="btn-undo" title="Geri al">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" id="btn-clear" title="Tümünü temizle">
+              <i class="bi bi-eraser"></i> Temizle
+            </button>
+            <button class="btn btn-sm btn-success" id="btn-save">
+              <i class="bi bi-floppy me-1"></i> Kaydet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas Alanı -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body p-2 text-center bg-dark" style="min-height:500px">
+        <div style="display:inline-block;position:relative;max-width:100%">
+          <canvas id="annotation-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="mt-2 text-muted small text-center" id="status-msg"></div>
+  </div>
+</div>
+
+<!-- Metin giriş modal -->
+<div class="modal fade" id="textModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0">Metin Ekle</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="text-input" class="form-control" placeholder="Notunuzu girin..." autofocus>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-sm btn-primary" id="text-confirm">Ekle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fabric.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- Sabitler ---
+  const IMAGE_URL = "{{ doc.file.url }}";
+  const SAVE_URL = "{% url 'documents:annotate' doc.pk %}";
+  const CSRF_TOKEN = "{{ csrf_token }}";
+  const SAVED_DATA = {{ doc.annotations|default:"{}"|safe }};
+
+  // --- Değişkenler ---
+  let canvas, fabricImg;
+  let currentMode = 'select';
+  let currentColor = '#e74c3c';
+  let strokeWidth = 3;
+  let isDrawingShape = false;
+  let shapeOrigin = null;
+  let activeShape = null;
+  let history = [];
+
+  // --- Canvas başlat ---
+  canvas = new fabric.Canvas('annotation-canvas', {
+    selection: true,
+    preserveObjectStacking: true,
+  });
+
+  // Görüntüyü yükle
+  fabric.Image.fromURL(IMAGE_URL, function (img) {
+    fabricImg = img;
+
+    // Canvas boyutunu görüntüye göre ayarla (max genişlik: ekran genişliği - 80px)
+    const maxW = Math.min(window.innerWidth - 80, 1200);
+    const scale = img.width > maxW ? maxW / img.width : 1;
+    const cW = img.width * scale;
+    const cH = img.height * scale;
+
+    canvas.setWidth(cW);
+    canvas.setHeight(cH);
+
+    img.set({
+      left: 0, top: 0,
+      scaleX: scale, scaleY: scale,
+      selectable: false, evented: false,
+      originX: 'left', originY: 'top',
+    });
+    canvas.add(img);
+    canvas.sendToBack(img);
+
+    // Kaydedilmiş notları yükle
+    if (SAVED_DATA && SAVED_DATA.objects && SAVED_DATA.objects.length) {
+      // Görüntü objesini geçici olarak kaldır, notları yükle, geri ekle
+      canvas.remove(img);
+      canvas.loadFromJSON(SAVED_DATA, function () {
+        canvas.add(img);
+        canvas.sendToBack(img);
+        canvas.renderAll();
+        saveHistory();
+      });
+    } else {
+      canvas.renderAll();
+      saveHistory();
+    }
+  }, { crossOrigin: 'anonymous' });
+
+  // --- Geçmiş (undo) ---
+  function saveHistory() {
+    // Görüntüyü hariç tut, sadece çizim objelerini kaydet
+    const objects = canvas.getObjects().filter(o => o !== fabricImg);
+    history.push(JSON.stringify(objects.map(o => o.toJSON())));
+    if (history.length > 30) history.shift();
+  }
+
+  document.getElementById('btn-undo').addEventListener('click', function () {
+    if (history.length <= 1) return;
+    history.pop();
+    const prev = JSON.parse(history[history.length - 1]);
+    // Çizim objelerini temizle
+    canvas.getObjects().filter(o => o !== fabricImg).forEach(o => canvas.remove(o));
+    if (prev.length === 0) { canvas.renderAll(); return; }
+    fabric.util.enlivenObjects(prev, function (objs) {
+      objs.forEach(o => canvas.add(o));
+      canvas.renderAll();
+    });
+  });
+
+  // --- Mod değiştirme ---
+  const modeBtns = {
+    select: document.getElementById('btn-select'),
+    pen: document.getElementById('btn-pen'),
+    rect: document.getElementById('btn-rect'),
+    circle: document.getElementById('btn-circle'),
+    arrow: document.getElementById('btn-arrow'),
+    text: document.getElementById('btn-text'),
+  };
+
+  Object.entries(modeBtns).forEach(([mode, btn]) => {
+    btn.addEventListener('click', function () {
+      setMode(mode);
+    });
+  });
+
+  function setMode(mode) {
+    currentMode = mode;
+    Object.values(modeBtns).forEach(b => b.classList.remove('active'));
+    modeBtns[mode].classList.add('active');
+
+    canvas.isDrawingMode = (mode === 'pen');
+    canvas.selection = (mode === 'select');
+    canvas.getObjects().filter(o => o !== fabricImg).forEach(o => {
+      o.selectable = (mode === 'select');
+      o.evented = (mode === 'select');
+    });
+
+    if (mode === 'pen') {
+      canvas.freeDrawingBrush.color = currentColor;
+      canvas.freeDrawingBrush.width = strokeWidth;
+    }
+
+    // Yazı boyutu grubunu göster/gizle
+    const fsGroup = document.getElementById('font-size-group');
+    fsGroup.style.display = (mode === 'text') ? 'flex' : 'none';
+
+    canvas.renderAll();
+  }
+
+  // --- Renk ---
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentColor = this.dataset.color;
+      applyColorToSelection();
+    });
+  });
+
+  document.getElementById('custom-color').addEventListener('input', function () {
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    currentColor = this.value;
+    applyColorToSelection();
+  });
+
+  function applyColorToSelection() {
+    if (canvas.isDrawingMode) {
+      canvas.freeDrawingBrush.color = currentColor;
+    }
+    const active = canvas.getActiveObject();
+    if (active) {
+      if (active.type === 'i-text' || active.type === 'text') {
+        active.set('fill', currentColor);
+      } else {
+        active.set('stroke', currentColor);
+      }
+      canvas.renderAll();
+    }
+  }
+
+  // --- Çizgi kalınlığı ---
+  const strokeInput = document.getElementById('stroke-width');
+  const strokeLabel = document.getElementById('stroke-label');
+  strokeInput.addEventListener('input', function () {
+    strokeWidth = parseInt(this.value);
+    strokeLabel.textContent = strokeWidth + 'px';
+    if (canvas.isDrawingMode) {
+      canvas.freeDrawingBrush.width = strokeWidth;
+    }
+    const active = canvas.getActiveObject();
+    if (active && active.type !== 'i-text' && active.type !== 'text') {
+      active.set('strokeWidth', strokeWidth);
+      canvas.renderAll();
+    }
+  });
+
+  // --- Şekil çizimi (mouse down/move/up) ---
+  canvas.on('mouse:down', function (opt) {
+    if (currentMode === 'select' || currentMode === 'pen' || currentMode === 'text') return;
+    if (opt.target && opt.target !== fabricImg) return;
+    isDrawingShape = true;
+    const pointer = canvas.getPointer(opt.e);
+    shapeOrigin = { x: pointer.x, y: pointer.y };
+
+    if (currentMode === 'rect') {
+      activeShape = new fabric.Rect({
+        left: pointer.x, top: pointer.y,
+        width: 0, height: 0,
+        fill: 'transparent',
+        stroke: currentColor,
+        strokeWidth: strokeWidth,
+        selectable: false,
+      });
+      canvas.add(activeShape);
+    } else if (currentMode === 'circle') {
+      activeShape = new fabric.Ellipse({
+        left: pointer.x, top: pointer.y,
+        rx: 0, ry: 0,
+        fill: 'transparent',
+        stroke: currentColor,
+        strokeWidth: strokeWidth,
+        selectable: false,
+      });
+      canvas.add(activeShape);
+    } else if (currentMode === 'arrow') {
+      activeShape = new fabric.Line(
+        [pointer.x, pointer.y, pointer.x, pointer.y],
+        { stroke: currentColor, strokeWidth: strokeWidth, selectable: false }
+      );
+      canvas.add(activeShape);
+    }
+  });
+
+  canvas.on('mouse:move', function (opt) {
+    if (!isDrawingShape || !activeShape) return;
+    const pointer = canvas.getPointer(opt.e);
+
+    if (currentMode === 'rect') {
+      const w = Math.abs(pointer.x - shapeOrigin.x);
+      const h = Math.abs(pointer.y - shapeOrigin.y);
+      activeShape.set({
+        left: Math.min(pointer.x, shapeOrigin.x),
+        top: Math.min(pointer.y, shapeOrigin.y),
+        width: w, height: h,
+      });
+    } else if (currentMode === 'circle') {
+      const rx = Math.abs(pointer.x - shapeOrigin.x) / 2;
+      const ry = Math.abs(pointer.y - shapeOrigin.y) / 2;
+      activeShape.set({
+        left: Math.min(pointer.x, shapeOrigin.x),
+        top: Math.min(pointer.y, shapeOrigin.y),
+        rx: rx, ry: ry,
+      });
+    } else if (currentMode === 'arrow') {
+      activeShape.set({ x2: pointer.x, y2: pointer.y });
+    }
+    canvas.renderAll();
+  });
+
+  canvas.on('mouse:up', function () {
+    if (!isDrawingShape) return;
+    isDrawingShape = false;
+    if (activeShape) {
+      // Ok için ok başlığı ekle
+      if (currentMode === 'arrow') {
+        addArrowHead(activeShape);
+      }
+      activeShape.set('selectable', true);
+      activeShape = null;
+      saveHistory();
+    }
+  });
+
+  // Ok başlığı
+  function addArrowHead(line) {
+    const x1 = line.x1, y1 = line.y1, x2 = line.x2, y2 = line.y2;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const headLen = Math.max(15, strokeWidth * 4);
+    const points = [
+      { x: x2, y: y2 },
+      { x: x2 - headLen * Math.cos(angle - Math.PI / 6), y: y2 - headLen * Math.sin(angle - Math.PI / 6) },
+      { x: x2 - headLen * Math.cos(angle + Math.PI / 6), y: y2 - headLen * Math.sin(angle + Math.PI / 6) },
+    ];
+    const head = new fabric.Polygon(points, {
+      fill: currentColor,
+      stroke: currentColor,
+      strokeWidth: 1,
+      selectable: false,
+      evented: false,
+    });
+    const group = new fabric.Group([line, head], { selectable: true });
+    canvas.remove(line);
+    canvas.add(group);
+    canvas.renderAll();
+  }
+
+  // --- Metin ekleme ---
+  let pendingTextPoint = null;
+  const textModal = new bootstrap.Modal(document.getElementById('textModal'));
+
+  canvas.on('mouse:down', function (opt) {
+    if (currentMode !== 'text') return;
+    if (opt.target && opt.target !== fabricImg) return;
+    const pointer = canvas.getPointer(opt.e);
+    pendingTextPoint = pointer;
+    document.getElementById('text-input').value = '';
+    textModal.show();
+    setTimeout(() => document.getElementById('text-input').focus(), 300);
+  });
+
+  function addTextAtPoint(text, point) {
+    if (!text.trim()) return;
+    const fontSize = parseInt(document.getElementById('font-size').value) || 18;
+    const itext = new fabric.IText(text, {
+      left: point.x, top: point.y,
+      fill: currentColor,
+      fontSize: fontSize,
+      fontFamily: 'Arial',
+      selectable: true,
+    });
+    canvas.add(itext);
+    canvas.setActiveObject(itext);
+    canvas.renderAll();
+    saveHistory();
+  }
+
+  document.getElementById('text-confirm').addEventListener('click', function () {
+    const val = document.getElementById('text-input').value;
+    textModal.hide();
+    if (pendingTextPoint && val.trim()) {
+      addTextAtPoint(val, pendingTextPoint);
+    }
+    pendingTextPoint = null;
+  });
+
+  document.getElementById('text-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('text-confirm').click();
+  });
+
+  // --- Sil ---
+  document.getElementById('btn-delete').addEventListener('click', function () {
+    const active = canvas.getActiveObjects();
+    if (!active.length) return;
+    active.forEach(o => { if (o !== fabricImg) canvas.remove(o); });
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    saveHistory();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      const active = canvas.getActiveObjects();
+      active.forEach(o => { if (o !== fabricImg) canvas.remove(o); });
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      saveHistory();
+    }
+  });
+
+  // --- Tümünü temizle ---
+  document.getElementById('btn-clear').addEventListener('click', function () {
+    if (!confirm('Tüm notlar silinsin mi?')) return;
+    canvas.getObjects().filter(o => o !== fabricImg).forEach(o => canvas.remove(o));
+    canvas.renderAll();
+    saveHistory();
+  });
+
+  // --- Kaydet ---
+  document.getElementById('btn-save').addEventListener('click', function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Kaydediliyor...';
+
+    // Görüntüyü hariç tut
+    const objects = canvas.getObjects().filter(o => o !== fabricImg);
+    const tempCanvas = new fabric.Canvas();
+    tempCanvas.setWidth(canvas.width);
+    tempCanvas.setHeight(canvas.height);
+
+    const jsonData = {
+      version: '5.3.1',
+      objects: objects.map(o => o.toJSON()),
+      width: canvas.width,
+      height: canvas.height,
+    };
+
+    fetch(SAVE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN,
+      },
+      body: JSON.stringify({ annotations: jsonData }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        showStatus('Notlar kaydedildi.', 'success');
+      } else {
+        showStatus('Hata: ' + (data.error || 'Bilinmeyen hata'), 'danger');
+      }
+    })
+    .catch(() => showStatus('Bağlantı hatası.', 'danger'))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-floppy me-1"></i> Kaydet';
+    });
+  });
+
+  function showStatus(msg, type) {
+    const el = document.getElementById('status-msg');
+    el.innerHTML = `<span class="text-${type}">${msg}</span>`;
+    setTimeout(() => { el.innerHTML = ''; }, 3000);
+  }
+
+  // --- Eklenen objeleri seçilebilir yap ---
+  canvas.on('object:added', function (opt) {
+    if (currentMode !== 'select' && opt.target !== fabricImg) {
+      opt.target.selectable = false;
+      opt.target.evented = false;
+    }
+  });
+
+  // Kalem çizimi bittikten sonra
+  canvas.on('path:created', function () {
+    saveHistory();
+  });
+
+})();
+</script>
+
+<style>
+.color-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  display: inline-block;
+}
+.color-btn.active {
+  border-color: #333;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333;
+}
+#annotation-canvas {
+  display: block;
+  max-width: 100%;
+}
+</style>
+{% endblock %}
