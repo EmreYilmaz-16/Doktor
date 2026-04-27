@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if object %}Hizmet Düzenle{% else %}Yeni Hizmet{% endif %}{% endblock %}
+{% block page_title %}{% if object %}Hizmet Düzenle{% else %}Yeni Hizmet{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6">
+    <div class="card">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-list-stars me-1 text-primary"></i>
+          {% if object %}{{ object.name }}{% else %}Yeni Hizmet{% endif %}
+        </h6>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i> Kaydet
+            </button>
+            <a href="{% url 'payments:service_list' %}" class="btn btn-outline-secondary">İptal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

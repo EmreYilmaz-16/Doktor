@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reçete #{{ prescription.pk }} — {{ prescription.patient.full_name }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #222;
+    background: #fff;
+    padding: 20px;
+  }
+
+  .rx-page {
+    max-width: 700px;
+    margin: 0 auto;
+    border: 2px solid #333;
+    padding: 28px 32px;
+    min-height: 900px;
+    position: relative;
+  }
+
+  /* Başlık */
+  .rx-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 14px; margin-bottom: 16px; }
+  .rx-header .clinic-name { font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+  .rx-header .doctor-info { font-size: 12px; color: #555; margin-top: 4px; }
+  .rx-header .rx-title {
+    display: inline-block; font-size: 20px; font-weight: 800;
+    letter-spacing: 4px; border: 2px solid #333;
+    padding: 4px 20px; margin-top: 10px;
+  }
+
+  /* Hasta bilgisi */
+  .rx-patient {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    border: 1px solid #ccc; border-radius: 4px;
+    padding: 10px 14px; margin-bottom: 20px;
+    background: #fafafa;
+  }
+  .rx-patient-item label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: .5px; display: block; }
+  .rx-patient-item span { font-weight: 600; font-size: 13px; }
+
+  /* İlaçlar */
+  .rx-items { margin-bottom: 24px; }
+  .rx-items h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  .rx-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px dashed #e0e0e0;
+  }
+  .rx-item:last-child { border-bottom: none; }
+  .rx-item-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #333; color: #fff; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .rx-item-body { flex: 1; }
+  .rx-item-name { font-weight: 700; font-size: 14px; }
+  .rx-item-active { font-size: 11px; color: #666; margin-top: 1px; }
+  .rx-item-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .rx-badge {
+    background: #f0f0f0; border: 1px solid #ddd;
+    border-radius: 3px; font-size: 11px; padding: 2px 7px;
+    color: #444;
+  }
+  .rx-item-instruction { font-size: 11px; color: #555; margin-top: 4px; font-style: italic; }
+  .rx-item-note { font-size: 11px; color: #b45309; margin-top: 2px; }
+
+  /* Not */
+  .rx-note { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 4px; padding: 10px 14px; margin-bottom: 24px; font-size: 12px; }
+  .rx-note strong { display: block; margin-bottom: 4px; }
+
+  /* İmza */
+  .rx-footer {
+    position: absolute; bottom: 28px; right: 32px;
+    text-align: center; width: 180px;
+  }
+  .rx-footer .sig-line { border-top: 1px solid #333; padding-top: 6px; font-size: 12px; }
+  .rx-footer .sig-name { font-weight: 600; font-size: 13px; }
+
+  /* Tarih + Rx sembolü sol alt */
+  .rx-footer-left {
+    position: absolute; bottom: 28px; left: 32px;
+    font-size: 12px; color: #555;
+  }
+  .rx-symbol { font-size: 36px; font-weight: 900; color: #333; line-height: 1; }
+
+  /* Baskı butonu (ekranda görünür, baskıda yok) */
+  .no-print {
+    max-width: 700px; margin: 16px auto; display: flex; gap: 10px;
+  }
+  .no-print button, .no-print a {
+    padding: 8px 20px; border-radius: 5px; font-size: 14px;
+    cursor: pointer; text-decoration: none; display: inline-block;
+  }
+  .btn-print { background: #333; color: #fff; border: none; }
+  .btn-back  { background: #fff; color: #333; border: 1px solid #ccc; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { padding: 0; }
+    .rx-page { border: 2px solid #000; margin: 0; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">&#128438; Yazdır / PDF</button>
+  <a class="btn-back" href="{% url 'prescriptions:detail' prescription.pk %}">&#8592; Geri Dön</a>
+  <a class="btn-back" href="{% url 'prescriptions:pdf' prescription.pk %}" target="_blank">&#128196; PDF İndir</a>
+</div>
+
+<div class="rx-page">
+
+  <div class="rx-header">
+    <div class="clinic-name">{{ prescription.doctor.branch|default:"Klinik" }}</div>
+    <div class="doctor-info">
+      {{ prescription.doctor.title|default:"" }} {{ prescription.doctor.user.get_full_name }}
+      {% if prescription.doctor.phone %} · {{ prescription.doctor.phone }}{% endif %}
+    </div>
+    <div class="rx-title">REÇETE</div>
+  </div>
+
+  <div class="rx-patient">
+    <div class="rx-patient-item">
+      <label>Hasta Adı</label>
+      <span>{{ prescription.patient.full_name }}</span>
+    </div>
+    {% if prescription.patient.birth_date %}
+    <div class="rx-patient-item">
+      <label>Doğum Tarihi</label>
+      <span>{{ prescription.patient.birth_date|date:"d.m.Y" }}</span>
+    </div>
+    {% endif %}
+    {% if prescription.patient.identity_no %}
+    <div class="rx-patient-item">
+      <label>TC / Pasaport</label>
+      <span>{{ prescription.patient.identity_no }}</span>
+    </div>
+    {% endif %}
+    <div class="rx-patient-item">
+      <label>Reçete Tarihi</label>
+      <span>{{ prescription.prescription_date|date:"d.m.Y" }}</span>
+    </div>
+  </div>
+
+  <div class="rx-items">
+    <h3>İlaçlar</h3>
+    {% for item in items %}
+    <div class="rx-item">
+      <div class="rx-item-num">{{ forloop.counter }}</div>
+      <div class="rx-item-body">
+        <div class="rx-item-name">{{ item.medicine_name }}</div>
+        {% if item.active_ingredient %}
+        <div class="rx-item-active">{{ item.active_ingredient }}</div>
+        {% endif %}
+        <div class="rx-item-badges">
+          {% if item.dosage %}<span class="rx-badge">Doz: {{ item.dosage }}</span>{% endif %}
+          {% if item.frequency %}<span class="rx-badge">{{ item.frequency }}</span>{% endif %}
+          {% if item.duration %}<span class="rx-badge">Süre: {{ item.duration }}</span>{% endif %}
+        </div>
+        {% if item.usage_instruction %}
+        <div class="rx-item-instruction">{{ item.usage_instruction }}</div>
+        {% endif %}
+        {% if item.note %}
+        <div class="rx-item-note">Not: {{ item.note }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if prescription.note %}
+  <div class="rx-note">
+    <strong>Reçete Notu:</strong>
+    {{ prescription.note }}
+  </div>
+  {% endif %}
+
+  <div class="rx-footer-left">
+    <div class="rx-symbol">℞</div>
+    <div>Reçete #{{ prescription.pk }}</div>
+    <div>{{ prescription.prescription_date|date:"d.m.Y" }}</div>
+  </div>
+
+  <div class="rx-footer">
+    <div class="sig-name">{{ prescription.doctor.title|default:"" }} {{ prescription.doctor.user.get_full_name }}</div>
+    <div class="sig-line">Doktor İmzası / Kaşe</div>
+  </div>
+
+</div>
+
+</body>
+</html>

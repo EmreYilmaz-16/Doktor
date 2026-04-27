@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Reçeteler{% endblock %}
+{% block page_title %}Reçeteler{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <h6 class="mb-0 fw-semibold"><i class="bi bi-prescription2 me-1"></i> Reçete Listesi</h6>
+  </div>
+  <div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Hasta adı..." value="{{ q }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Ara</button>
+        <a href="{% url 'prescriptions:list' %}" class="btn btn-sm btn-outline-secondary">Temizle</a>
+      </div>
+    </form>
+  </div>
+  <div class="card-body p-0">
+    {% if prescriptions %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Tarih</th>
+            <th>Hasta</th>
+            <th>Doktor</th>
+            <th>İlaç Sayısı</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rx in prescriptions %}
+          <tr>
+            <td class="fw-semibold text-nowrap">{{ rx.prescription_date|date:"d.m.Y" }}</td>
+            <td>
+              <a href="{% url 'patients:detail' rx.patient.pk %}" class="text-decoration-none">
+                {{ rx.patient.full_name }}
+              </a>
+            </td>
+            <td class="text-muted small">{{ rx.doctor }}</td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ rx.items.count }} ilaç</span>
+            </td>
+            <td>
+              {% if rx.status == 'ACTIVE' %}
+                <span class="badge bg-success">Aktif</span>
+              {% elif rx.status == 'COMPLETED' %}
+                <span class="badge bg-secondary">Tamamlandı</span>
+              {% else %}
+                <span class="badge bg-danger">İptal</span>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              <a href="{% url 'prescriptions:detail' rx.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'prescriptions:print' rx.pk %}" class="btn btn-sm btn-outline-success" target="_blank">
+                <i class="bi bi-printer"></i>
+              </a>
+              <a href="{% url 'prescriptions:pdf' rx.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                <i class="bi bi-file-pdf"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center py-3">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">‹</a></li>
+          {% endif %}
+          <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</a></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">›</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-prescription2 fs-2 d-block mb-2"></i>
+      {% if q %}Aramanıza uygun reçete bulunamadı.{% else %}Henüz reçete kaydı yok.{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

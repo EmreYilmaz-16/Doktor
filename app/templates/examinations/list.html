@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Muayeneler{% endblock %}
+{% block page_title %}Muayene Kayıtları{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <h6 class="mb-0 fw-semibold"><i class="bi bi-clipboard2-pulse me-1"></i> Muayene Kayıtları</h6>
+  </div>
+  <div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Hasta adı veya tanı..." value="{{ q }}">
+      </div>
+      {% if not request.user.is_doctor %}
+      <div class="col-md-2">
+        <select name="doctor" class="form-select form-select-sm">
+          <option value="">Tüm Doktorlar</option>
+          {% for d in doctors %}
+          <option value="{{ d.pk }}" {% if selected_doctor == d.pk|stringformat:"s" %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-md-2">
+        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}" title="Başlangıç tarihi">
+      </div>
+      <div class="col-md-2">
+        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}" title="Bitiş tarihi">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Ara</button>
+        <a href="{% url 'examinations:list' %}" class="btn btn-sm btn-outline-secondary">Temizle</a>
+      </div>
+    </form>
+  </div>
+  <div class="card-body p-0">
+    {% if examinations %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Tarih</th>
+            <th>Hasta</th>
+            <th>Doktor</th>
+            <th>Şikayet</th>
+            <th>Tanı</th>
+            <th>Kontrol</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for exam in examinations %}
+          <tr>
+            <td class="fw-semibold text-nowrap">{{ exam.created_at|date:"d.m.Y" }}</td>
+            <td>
+              <a href="{% url 'patients:detail' exam.patient.pk %}" class="text-decoration-none">
+                {{ exam.patient.full_name }}
+              </a>
+            </td>
+            <td class="text-muted small">{{ exam.doctor }}</td>
+            <td class="text-muted small">{{ exam.complaint|truncatechars:40|default:"-" }}</td>
+            <td>
+              {% if exam.diagnosis %}
+                <span class="fw-semibold">{{ exam.diagnosis|truncatechars:35 }}</span>
+                {% if exam.icd10_code %}<span class="badge bg-secondary ms-1">{{ exam.icd10_code }}</span>{% endif %}
+              {% elif exam.pre_diagnosis %}
+                <span class="text-muted fst-italic">{{ exam.pre_diagnosis|truncatechars:35 }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">
+              {% if exam.control_date %}
+                {% if exam.control_date < today %}
+                  <span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ exam.control_date|date:"d.m.Y" }}</span>
+                {% else %}
+                  {{ exam.control_date|date:"d.m.Y" }}
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <a href="{% url 'examinations:detail' exam.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center py-3">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&doctor={{ selected_doctor }}">‹</a></li>
+          {% endif %}
+          <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</a></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&doctor={{ selected_doctor }}">›</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-clipboard2 fs-2 d-block mb-2"></i>
+      {% if q %}Aramanıza uygun muayene kaydı bulunamadı.{% else %}Henüz muayene kaydı yok.{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
