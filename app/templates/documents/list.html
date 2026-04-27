@@ -86,7 +86,7 @@
                   </a>
                   {% if doc.is_image %}
                   <a href="{% url 'documents:annotate' doc.pk %}" class="btn btn-sm btn-outline-info" title="Görüntüye Not Ekle">
-                    <i class="bi bi-pencil-square"></i>
+                    <i class="bi bi-pencil-square me-1"></i>Not Ekle
                   </a>
                   {% endif %}
                   <a href="{% url 'documents:delete' doc.pk %}" class="btn btn-sm btn-outline-danger">
